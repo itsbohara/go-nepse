@@ -9,12 +9,19 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+// css.wasm contains obfuscated index-computation functions that mirror
+// NEPSE's client-side token parsing logic. The API returns tokens with
+// junk characters inserted at computed positions; these WASM functions
+// determine which positions to strip based on the salt values.
+//
 //go:embed css.wasm
 var cssWasm []byte
 
+// tokenParser wraps a WASM runtime to compute token character indices.
+// NEPSE obfuscates tokens by inserting characters at positions derived
+// from 5 salt values. This parser replicates the browser's decoding logic.
 type tokenParser struct {
 	rt  wazero.Runtime
-	mod api.Module
 	cdx api.Function
 	rdx api.Function
 	bdx api.Function
@@ -37,49 +44,37 @@ func newTokenParser() (*tokenParser, error) {
 		return nil, fmt.Errorf("instantiate wasm: %w", err)
 	}
 
-	getExport := func(name string) (api.Function, error) {
+	exports := []string{"cdx", "rdx", "bdx", "ndx", "mdx"}
+	funcs := make([]api.Function, len(exports))
+	for i, name := range exports {
 		f := mod.ExportedFunction(name)
 		if f == nil {
+			_ = rt.Close(ctx)
 			return nil, fmt.Errorf("export %q not found", name)
 		}
-		return f, nil
-	}
-
-	cdx, err := getExport("cdx")
-	if err != nil {
-		_ = rt.Close(ctx)
-		return nil, err
-	}
-	rdx, err := getExport("rdx")
-	if err != nil {
-		_ = rt.Close(ctx)
-		return nil, err
-	}
-	bdx, err := getExport("bdx")
-	if err != nil {
-		_ = rt.Close(ctx)
-		return nil, err
-	}
-	ndx, err := getExport("ndx")
-	if err != nil {
-		_ = rt.Close(ctx)
-		return nil, err
-	}
-	mdx, err := getExport("mdx")
-	if err != nil {
-		_ = rt.Close(ctx)
-		return nil, err
+		funcs[i] = f
 	}
 
 	return &tokenParser{
 		rt:  rt,
-		mod: mod,
-		cdx: cdx, rdx: rdx, bdx: bdx, ndx: ndx, mdx: mdx,
+		cdx: funcs[0], rdx: funcs[1], bdx: funcs[2], ndx: funcs[3], mdx: funcs[4],
 	}, nil
 }
 
-func (p *tokenParser) close(ctx context.Context) error {
-	return p.rt.Close(ctx)
+func (p *tokenParser) close() error {
+	return p.rt.Close(context.Background())
+}
+
+// call5 invokes a WASM function with 5 integer arguments.
+func (p *tokenParser) call5(f api.Function, a, b, c, d, e int) (int, error) {
+	res, err := f.Call(context.Background(),
+		uint64(uint32(a)), uint64(uint32(b)),
+		uint64(uint32(c)), uint64(uint32(d)), uint64(uint32(e)),
+	)
+	if err != nil {
+		return 0, err
+	}
+	return int(int32(res[0])), nil
 }
 
 type tokenIndices struct {
@@ -87,66 +82,53 @@ type tokenIndices struct {
 	refresh []int
 }
 
+// indicesFromSalts computes character positions to remove from obfuscated tokens.
+// Each WASM function is called with a specific salt permutation - the ordering
+// matches NEPSE's browser-side decoding logic exactly.
 func (p *tokenParser) indicesFromSalts(s [5]int) (tokenIndices, error) {
-	ctx := context.Background()
-
-	call5 := func(f api.Function, a, b, c, d, e int) (int, error) {
-		res, err := f.Call(ctx,
-			uint64(uint32(a)), uint64(uint32(b)),
-			uint64(uint32(c)), uint64(uint32(d)), uint64(uint32(e)),
-		)
-		if err != nil {
-			return 0, err
-		}
-		return int(int32(res[0])), nil
-	}
-
 	s1, s2, s3, s4, s5 := s[0], s[1], s[2], s[3], s[4]
 
-	n, err := call5(p.cdx, s1, s2, s3, s4, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	l, err := call5(p.rdx, s1, s2, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	o, err := call5(p.bdx, s1, s2, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	pIdx, err := call5(p.ndx, s1, s2, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	q, err := call5(p.mdx, s1, s2, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
+	// Access token indices: each function uses a specific salt permutation
+	accessCalls := []struct {
+		fn            api.Function
+		a, b, c, d, e int
+	}{
+		{p.cdx, s1, s2, s3, s4, s5},
+		{p.rdx, s1, s2, s4, s3, s5},
+		{p.bdx, s1, s2, s4, s3, s5},
+		{p.ndx, s1, s2, s4, s3, s5},
+		{p.mdx, s1, s2, s4, s3, s5},
 	}
 
-	a, err := call5(p.cdx, s2, s1, s3, s5, s4)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	b, err := call5(p.rdx, s2, s1, s3, s4, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	c, err := call5(p.bdx, s2, s1, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	d, err := call5(p.ndx, s2, s1, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
-	}
-	e, err := call5(p.mdx, s2, s1, s4, s3, s5)
-	if err != nil {
-		return tokenIndices{}, err
+	access := make([]int, len(accessCalls))
+	for i, call := range accessCalls {
+		idx, err := p.call5(call.fn, call.a, call.b, call.c, call.d, call.e)
+		if err != nil {
+			return tokenIndices{}, err
+		}
+		access[i] = idx
 	}
 
-	return tokenIndices{
-		access:  []int{n, l, o, pIdx, q},
-		refresh: []int{a, b, c, d, e},
-	}, nil
+	// Refresh token indices: uses swapped s1/s2 and different permutations
+	refreshCalls := []struct {
+		fn            api.Function
+		a, b, c, d, e int
+	}{
+		{p.cdx, s2, s1, s3, s5, s4},
+		{p.rdx, s2, s1, s3, s4, s5},
+		{p.bdx, s2, s1, s4, s3, s5},
+		{p.ndx, s2, s1, s4, s3, s5},
+		{p.mdx, s2, s1, s4, s3, s5},
+	}
+
+	refresh := make([]int, len(refreshCalls))
+	for i, call := range refreshCalls {
+		idx, err := p.call5(call.fn, call.a, call.b, call.c, call.d, call.e)
+		if err != nil {
+			return tokenIndices{}, err
+		}
+		refresh[i] = idx
+	}
+
+	return tokenIndices{access: access, refresh: refresh}, nil
 }

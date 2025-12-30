@@ -72,8 +72,8 @@ type Client interface {
 	// Configuration
 	GetConfig() *Config
 
-	// Lifecycle
-	Close(ctx context.Context) error
+	// Lifecycle - implements io.Closer
+	Close() error
 }
 
 // Options represents configuration options for creating a new NEPSE client.

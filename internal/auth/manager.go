@@ -1,4 +1,5 @@
-// Package auth handles NEPSE API authentication.
+// Package auth handles NEPSE API authentication using embedded WASM
+// to decode obfuscated tokens returned by the NEPSE API.
 package auth
 
 import (
@@ -6,26 +7,25 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
 )
 
-// DefaultTokenTTL is the maximum time a token is considered valid.
-// NEPSE tokens expire after ~60 seconds; we refresh at 45s for safety.
+// DefaultTokenTTL defines when to proactively refresh tokens.
+// NEPSE tokens expire after ~60 seconds; we refresh at 45s to avoid
+// mid-request expiration.
 const DefaultTokenTTL = 45 * time.Second
 
-// NepseHTTP abstracts the HTTP operations needed for token management.
+// NepseHTTP abstracts HTTP calls needed for token acquisition.
 type NepseHTTP interface {
-	// GetTokens performs GET to /api/authenticate/prove and returns the token response.
-	GetTokens(ctx context.Context) (*TokenResponse, error)
-
-	// RefreshTokens performs GET to /api/authenticate/refresh-token and returns new tokens.
-	RefreshTokens(ctx context.Context, refreshToken string) (*TokenResponse, error)
+	GetToken(ctx context.Context) (*TokenResponse, error)
 }
 
-// TokenResponse mirrors the JSON from /api/authenticate/prove.
+// TokenResponse is the JSON structure from /api/authenticate/prove.
+// Salt values are used to compute which characters to strip from tokens.
 type TokenResponse struct {
 	Salt1        int    `json:"salt1"`
 	Salt2        int    `json:"salt2"`
@@ -37,23 +37,23 @@ type TokenResponse struct {
 	ServerTime   int64  `json:"serverTime"`
 }
 
-// Manager manages NEPSE auth tokens.
+// Manager provides thread-safe access to NEPSE authentication tokens.
+// It uses singleflight to prevent thundering herd when multiple goroutines
+// request tokens simultaneously during refresh.
 type Manager struct {
 	http   NepseHTTP
 	parser *tokenParser
 
 	maxUpdatePeriod time.Duration
 
-	mu           sync.RWMutex
-	accessToken  string
-	refreshToken string
-	tokenTS      time.Time
-	salts        [5]int
+	mu          sync.RWMutex
+	accessToken string
+	tokenTS     time.Time
 
 	sf singleflight.Group
 }
 
-// NewManager constructs a Manager with embedded WASM parser.
+// NewManager creates a Manager with the embedded WASM token parser.
 func NewManager(httpClient NepseHTTP) (*Manager, error) {
 	parser, err := newTokenParser()
 	if err != nil {
@@ -66,15 +66,15 @@ func NewManager(httpClient NepseHTTP) (*Manager, error) {
 	}, nil
 }
 
-// Close releases WASM runtime resources.
-func (m *Manager) Close(ctx context.Context) error {
+// Close must be called to release WASM runtime memory.
+func (m *Manager) Close() error {
 	if m.parser != nil {
-		return m.parser.close(ctx)
+		return m.parser.close()
 	}
 	return nil
 }
 
-// AccessToken returns a valid access token, refreshing if needed.
+// AccessToken returns a valid access token, refreshing if expired.
 func (m *Manager) AccessToken(ctx context.Context) (string, error) {
 	if m.isValid() {
 		m.mu.RLock()
@@ -93,38 +93,8 @@ func (m *Manager) AccessToken(ctx context.Context) (string, error) {
 	return m.accessToken, nil
 }
 
-// GetSalts returns the current salt values.
-func (m *Manager) GetSalts(ctx context.Context) ([5]int, error) {
-	if !m.isValid() {
-		if err := m.update(ctx); err != nil {
-			return [5]int{}, err
-		}
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.salts, nil
-}
-
-// RefreshToken returns a valid refresh token, refreshing if needed.
-func (m *Manager) RefreshToken(ctx context.Context) (string, error) {
-	if m.isValid() {
-		m.mu.RLock()
-		t := m.refreshToken
-		m.mu.RUnlock()
-		return t, nil
-	}
-	if err := m.update(ctx); err != nil {
-		return "", err
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	if m.refreshToken == "" {
-		return "", errors.New("empty refresh token after update")
-	}
-	return m.refreshToken, nil
-}
-
-// ForceUpdate forces a token refresh.
+// ForceUpdate invalidates the cache and fetches fresh tokens.
+// Used after receiving 401 to force re-authentication.
 func (m *Manager) ForceUpdate(ctx context.Context) error {
 	return m.update(ctx)
 }
@@ -141,23 +111,21 @@ func (m *Manager) isValid() bool {
 func (m *Manager) update(ctx context.Context) error {
 	_, err, _ := m.sf.Do("token_update", func() (any, error) {
 		if m.isValid() {
-			return struct{}{}, nil
+			return nil, nil
 		}
 
-		resp, err := m.http.GetTokens(ctx)
+		resp, err := m.http.GetToken(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("get token: %w", err)
 		}
 
-		access, refresh, salts, ts, err := m.parseResponse(*resp)
+		access, ts, err := m.parseResponse(*resp)
 		if err != nil {
 			return nil, err
 		}
 
 		m.mu.Lock()
 		m.accessToken = access
-		m.refreshToken = refresh
-		m.salts = salts
 		if ts > 0 {
 			m.tokenTS = time.Unix(ts, 0)
 		} else {
@@ -165,27 +133,24 @@ func (m *Manager) update(ctx context.Context) error {
 		}
 		m.mu.Unlock()
 
-		return struct{}{}, nil
+		return nil, nil
 	})
 	return err
 }
 
-func (m *Manager) parseResponse(tr TokenResponse) (string, string, [5]int, int64, error) {
+func (m *Manager) parseResponse(tr TokenResponse) (string, int64, error) {
 	salts := [5]int{tr.Salt1, tr.Salt2, tr.Salt3, tr.Salt4, tr.Salt5}
 
 	idx, err := m.parser.indicesFromSalts(salts)
 	if err != nil {
-		return "", "", salts, 0, fmt.Errorf("wasm parse: %w", err)
+		return "", 0, fmt.Errorf("wasm parse: %w", err)
 	}
 
 	parsedAccess := sliceSkipAt(tr.AccessToken, idx.access...)
-	parsedRefresh := sliceSkipAt(tr.RefreshToken, idx.refresh...)
-
-	sec := tr.ServerTime / 1000
-	return parsedAccess, parsedRefresh, salts, sec, nil
+	return parsedAccess, tr.ServerTime / 1000, nil
 }
 
-// sliceSkipAt removes characters at specified positions from a string.
+// sliceSkipAt strips junk characters inserted by NEPSE's token obfuscation.
 func sliceSkipAt(s string, positions ...int) string {
 	if len(positions) == 0 {
 		return s
@@ -193,7 +158,7 @@ func sliceSkipAt(s string, positions ...int) string {
 
 	ps := make([]int, len(positions))
 	copy(ps, positions)
-	sortInts(ps)
+	sort.Ints(ps)
 
 	b := []byte(s)
 	var out []byte
@@ -209,16 +174,7 @@ func sliceSkipAt(s string, positions ...int) string {
 	return string(out)
 }
 
-// sortInts sorts a slice of ints in ascending order.
-func sortInts(a []int) {
-	for i := 1; i < len(a); i++ {
-		for j := i; j > 0 && a[j-1] > a[j]; j-- {
-			a[j-1], a[j] = a[j], a[j-1]
-		}
-	}
-}
-
-// SetAuthHeader sets the Authorization header on the request.
+// SetAuthHeader adds the NEPSE-specific "Salter" authorization header.
 func SetAuthHeader(req *http.Request, token string) {
 	req.Header.Set("Authorization", "Salter "+token)
 }

@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("Failed to create NEPSE client: %v", err)
 	}
 	defer func() {
-		if err := client.Close(context.Background()); err != nil {
+		if err := client.Close(); err != nil {
 			log.Printf("Close client: %v", err)
 		}
 	}()

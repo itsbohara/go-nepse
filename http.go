@@ -63,8 +63,8 @@ func newHTTPClient(options *Options) (*nepseClient, error) {
 	return c, nil
 }
 
-// GetTokens implements auth.NepseHTTP interface.
-func (h *nepseClient) GetTokens(ctx context.Context) (*auth.TokenResponse, error) {
+// GetToken implements auth.NepseHTTP interface.
+func (h *nepseClient) GetToken(ctx context.Context) (*auth.TokenResponse, error) {
 	url := h.config.BaseURL + "/api/authenticate/prove"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -72,36 +72,6 @@ func (h *nepseClient) GetTokens(ctx context.Context) (*auth.TokenResponse, error
 		return nil, NewInternalError("failed to create request", err)
 	}
 
-	h.setCommonHeaders(req)
-
-	resp, err := h.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, MapHTTPStatusToError(resp.StatusCode, resp.Status)
-	}
-
-	var tokenResp auth.TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return nil, NewInternalError("failed to decode token response", err)
-	}
-
-	return &tokenResp, nil
-}
-
-// RefreshTokens implements auth.NepseHTTP interface.
-func (h *nepseClient) RefreshTokens(ctx context.Context, refreshToken string) (*auth.TokenResponse, error) {
-	url := h.config.BaseURL + "/api/authenticate/refresh-token"
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, NewInternalError("failed to create request", err)
-	}
-
-	req.Header.Set("Authorization", "Salter "+refreshToken)
 	h.setCommonHeaders(req)
 
 	resp, err := h.doRequest(req)
@@ -265,9 +235,9 @@ func (h *nepseClient) GetConfig() *Config {
 }
 
 // Close closes the HTTP client and auth manager.
-func (h *nepseClient) Close(ctx context.Context) error {
+func (h *nepseClient) Close() error {
 	if h.authManager != nil {
-		return h.authManager.Close(ctx)
+		return h.authManager.Close()
 	}
 	return nil
 }

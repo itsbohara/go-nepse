@@ -29,7 +29,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create nepse client: %v", err)
 	}
-	defer c.Close(context.Background())
+	defer c.Close()
 
 	a := &app{client: c}
 
