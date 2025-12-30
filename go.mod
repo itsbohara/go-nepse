@@ -1,4 +1,4 @@
-module github.com/voidarchive/nepseauth
+module github.com/voidarchive/go-nepse
 
 go 1.23.0
 

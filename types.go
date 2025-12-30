@@ -1,12 +1,12 @@
 package nepse
 
-// MarketSummaryItem represents a single item in the market summary response
+// MarketSummaryItem represents a single item in the market summary response.
 type MarketSummaryItem struct {
 	Detail string  `json:"detail"`
 	Value  float64 `json:"value"`
 }
 
-// MarketSummary represents the processed market summary data
+// MarketSummary represents the processed market summary data.
 type MarketSummary struct {
 	TotalTurnover             float64
 	TotalTradedShares         float64
@@ -16,19 +16,19 @@ type MarketSummary struct {
 	TotalFloatMarketCap       float64
 }
 
-// MarketStatus represents the current market status
+// MarketStatus represents the current market status.
 type MarketStatus struct {
-	IsOpen string `json:"isOpen"` // API returns "OPEN" or "CLOSE" string, not boolean
+	IsOpen string `json:"isOpen"`
 	AsOf   string `json:"asOf"`
 	ID     int32  `json:"id"`
 }
 
-// IsMarketOpen returns true if the market is currently open
+// IsMarketOpen returns true if the market is currently open.
 func (m *MarketStatus) IsMarketOpen() bool {
 	return m.IsOpen == "OPEN"
 }
 
-// NepseIndexRaw represents the raw NEPSE index response item
+// NepseIndexRaw represents the raw NEPSE index response item.
 type NepseIndexRaw struct {
 	ID               int32   `json:"id"`
 	Index            string  `json:"index"`
@@ -44,7 +44,7 @@ type NepseIndexRaw struct {
 	GeneratedTime    string  `json:"generatedTime"`
 }
 
-// NepseIndex represents the NEPSE main index (ID 58)
+// NepseIndex represents the NEPSE main index (ID 58).
 type NepseIndex struct {
 	IndexValue       float64 `json:"close"`
 	PercentChange    float64 `json:"perChange"`
@@ -58,7 +58,7 @@ type NepseIndex struct {
 	GeneratedTime    string  `json:"generatedTime"`
 }
 
-// SubIndex represents a sector sub-index (uses same structure as NepseIndexRaw)
+// SubIndex represents a sector sub-index.
 type SubIndex struct {
 	ID               int32   `json:"id"`
 	Index            string  `json:"index"`
@@ -74,7 +74,7 @@ type SubIndex struct {
 	GeneratedTime    string  `json:"generatedTime"`
 }
 
-// Security represents a listed security/company
+// Security represents a listed security/company.
 type Security struct {
 	ID                   int32  `json:"id"`
 	Symbol               string `json:"symbol"`
@@ -88,7 +88,7 @@ type Security struct {
 	ListingDate          string `json:"listingDate"`
 }
 
-// Company represents company information (different from Security)
+// Company represents company information.
 type Company struct {
 	ID                   int32   `json:"id"`
 	Symbol               string  `json:"symbol"`
@@ -103,7 +103,7 @@ type Company struct {
 	HasTradingPermission bool    `json:"hasTradingPermission"`
 }
 
-// TodayPrice represents today's price data for a security
+// TodayPrice represents today's price data for a security.
 type TodayPrice struct {
 	ID                  int32   `json:"id"`
 	Symbol              string  `json:"symbol"`
@@ -125,7 +125,7 @@ type TodayPrice struct {
 	MinPrice            float64 `json:"minPrice"`
 }
 
-// PriceHistory represents historical price data for a security
+// PriceHistory represents historical price data for a security.
 type PriceHistory struct {
 	BusinessDate        string  `json:"businessDate"`
 	SecurityID          int32   `json:"securityId"`
@@ -143,7 +143,7 @@ type PriceHistory struct {
 	PercentageChange    float64 `json:"percentageChange"`
 }
 
-// FloorSheetEntry represents a single floor sheet entry
+// FloorSheetEntry represents a single floor sheet entry.
 type FloorSheetEntry struct {
 	ContractID       int64   `json:"contractId"`
 	StockSymbol      string  `json:"stockSymbol"`
@@ -161,7 +161,7 @@ type FloorSheetEntry struct {
 	TradeBookID      int64   `json:"tradeBookId"`
 }
 
-// FloorSheetResponse represents the paginated floor sheet response
+// FloorSheetResponse represents the paginated floor sheet response.
 type FloorSheetResponse struct {
 	FloorSheets struct {
 		Content          []FloorSheetEntry `json:"content"`
@@ -175,24 +175,23 @@ type FloorSheetResponse struct {
 	} `json:"floorsheets"`
 }
 
-// MarketDepth represents market depth information for a security
-type MarketDepth struct {
-	SecurityID   int32  `json:"securityId"`
-	Symbol       string `json:"symbol"`
-	SecurityName string `json:"securityName"`
-	BuyDepth     []struct {
-		Price    float64 `json:"price"`
-		Quantity int64   `json:"quantity"`
-		Orders   int32   `json:"orders"`
-	} `json:"buyDepth"`
-	SellDepth []struct {
-		Price    float64 `json:"price"`
-		Quantity int64   `json:"quantity"`
-		Orders   int32   `json:"orders"`
-	} `json:"sellDepth"`
+// DepthEntry represents a single entry in market depth.
+type DepthEntry struct {
+	Price    float64 `json:"price"`
+	Quantity int64   `json:"quantity"`
+	Orders   int32   `json:"orders"`
 }
 
-// TopListEntry represents entries in top gainers/losers/trades lists
+// MarketDepth represents market depth information for a security.
+type MarketDepth struct {
+	SecurityID   int32        `json:"securityId"`
+	Symbol       string       `json:"symbol"`
+	SecurityName string       `json:"securityName"`
+	BuyDepth     []DepthEntry `json:"buyDepth"`
+	SellDepth    []DepthEntry `json:"sellDepth"`
+}
+
+// TopListEntry represents entries in top gainers/losers/trades lists.
 type TopListEntry struct {
 	Symbol              string  `json:"symbol"`
 	SecurityName        string  `json:"securityName"`
@@ -208,7 +207,7 @@ type TopListEntry struct {
 	PreviousClose       float64 `json:"previousClose,omitempty"`
 }
 
-// SupplyDemandEntry represents supply and demand data
+// SupplyDemandEntry represents supply and demand data.
 type SupplyDemandEntry struct {
 	Symbol            string  `json:"symbol"`
 	SecurityName      string  `json:"securityName"`
@@ -219,18 +218,18 @@ type SupplyDemandEntry struct {
 	DemandSupplyRatio float64 `json:"demandSupplyRatio"`
 }
 
-// GraphDataPoint represents a single data point in graph data
+// GraphDataPoint represents a single data point in graph data.
 type GraphDataPoint struct {
 	Date  string  `json:"date"`
 	Value float64 `json:"value"`
 }
 
-// GraphResponse represents graph data response
+// GraphResponse represents graph data response.
 type GraphResponse struct {
 	Data []GraphDataPoint `json:"data"`
 }
 
-// CompanyDetailsRaw represents the raw nested company details response
+// CompanyDetailsRaw represents the raw nested company details response.
 type CompanyDetailsRaw struct {
 	SecurityMcsData struct {
 		SecurityID          string  `json:"securityId"`
@@ -258,7 +257,7 @@ type CompanyDetailsRaw struct {
 	} `json:"securityData"`
 }
 
-// CompanyDetails represents processed company information
+// CompanyDetails represents processed company information.
 type CompanyDetails struct {
 	ID               int32  `json:"id"`
 	Symbol           string `json:"symbol"`
@@ -268,7 +267,6 @@ type CompanyDetails struct {
 	ActiveStatus     string `json:"activeStatus"`
 	PermittedToTrade string `json:"permittedToTrade"`
 
-	// Market data fields
 	OpenPrice           float64 `json:"openPrice"`
 	HighPrice           float64 `json:"highPrice"`
 	LowPrice            float64 `json:"lowPrice"`
@@ -283,7 +281,7 @@ type CompanyDetails struct {
 	LastUpdatedDateTime string  `json:"lastUpdatedDateTime"`
 }
 
-// LiveMarketEntry represents live market data entry
+// LiveMarketEntry represents live market data entry.
 type LiveMarketEntry struct {
 	Symbol           string  `json:"symbol"`
 	SecurityName     string  `json:"securityName"`
@@ -297,10 +295,10 @@ type LiveMarketEntry struct {
 	LastTradedVolume int64   `json:"lastTradedVolume"`
 }
 
-// SectorScrips represents scrips grouped by sector
+// SectorScrips represents scrips grouped by sector.
 type SectorScrips map[string][]string
 
-// PaginatedResponse represents a generic paginated response
+// PaginatedResponse represents a generic paginated response.
 type PaginatedResponse[T any] struct {
 	Content          []T   `json:"content"`
 	PageNumber       int32 `json:"number"`
@@ -311,4 +309,3 @@ type PaginatedResponse[T any] struct {
 	Last             bool  `json:"last"`
 	NumberOfElements int32 `json:"numberOfElements"`
 }
-

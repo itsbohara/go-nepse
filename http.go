@@ -9,19 +9,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voidarchive/nepseauth/auth"
+	"github.com/voidarchive/go-nepse/internal/auth"
 )
 
-// HTTPClient implements the NEPSE HTTP client with authentication
-type HTTPClient struct {
+// nepseClient implements the NEPSE HTTP client with authentication.
+type nepseClient struct {
 	client      *http.Client
 	config      *Config
 	authManager *auth.Manager
 	options     *Options
 }
 
-// NewHTTPClient creates a new HTTP client for NEPSE API
-func NewHTTPClient(options *Options) (*HTTPClient, error) {
+// newHTTPClient creates a new HTTP client for NEPSE API.
+func newHTTPClient(options *Options) (*nepseClient, error) {
 	if options == nil {
 		options = DefaultOptions()
 	}
@@ -30,46 +30,41 @@ func NewHTTPClient(options *Options) (*HTTPClient, error) {
 		options.Config = DefaultConfig()
 	}
 
-	// Create or use provided HTTP client
 	httpClient := options.HTTPClient
 	if httpClient == nil {
-		// Only construct transport if no client supplied
 		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{ //nolint:gosec // user controls via TLSVerification
-				InsecureSkipVerify: !options.TLSVerification,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: !options.TLSVerification, //nolint:gosec
 			},
 			MaxIdleConns:        100,
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     90 * time.Second,
-			// Rely on Go's transparent gzip decompression (DisableCompression=false)
 		}
 		httpClient = &http.Client{
 			Timeout:   options.HTTPTimeout,
 			Transport: transport,
 		}
 	} else if httpClient.Timeout == 0 {
-		// Ensure a reasonable default timeout if caller didn't set one
 		httpClient.Timeout = options.HTTPTimeout
 	}
 
-	nepseClient := &HTTPClient{
+	c := &nepseClient{
 		client:  httpClient,
 		config:  options.Config,
 		options: options,
 	}
 
-	// Create auth manager
-	authManager, err := auth.NewManager(nepseClient)
+	authManager, err := auth.NewManager(c)
 	if err != nil {
 		return nil, NewInternalError("failed to create auth manager", err)
 	}
-	nepseClient.authManager = authManager
+	c.authManager = authManager
 
-	return nepseClient, nil
+	return c, nil
 }
 
-// GetTokens implements the auth.NepseHTTP interface for the auth package
-func (h *HTTPClient) GetTokens(ctx context.Context) (*auth.TokenResponse, error) {
+// GetTokens implements auth.NepseHTTP interface.
+func (h *nepseClient) GetTokens(ctx context.Context) (*auth.TokenResponse, error) {
 	url := h.config.BaseURL + "/api/authenticate/prove"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -77,7 +72,7 @@ func (h *HTTPClient) GetTokens(ctx context.Context) (*auth.TokenResponse, error)
 		return nil, NewInternalError("failed to create request", err)
 	}
 
-	h.setCommonHeaders(req, false)
+	h.setCommonHeaders(req)
 
 	resp, err := h.doRequest(req)
 	if err != nil {
@@ -89,22 +84,16 @@ func (h *HTTPClient) GetTokens(ctx context.Context) (*auth.TokenResponse, error)
 		return nil, MapHTTPStatusToError(resp.StatusCode, resp.Status)
 	}
 
-	body, err := h.getResponseBody(resp)
-	if err != nil {
-		return nil, NewInternalError("failed to read response body", err)
-	}
-	defer body.Close()
-
 	var tokenResp auth.TokenResponse
-	if err := json.NewDecoder(body).Decode(&tokenResp); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
 		return nil, NewInternalError("failed to decode token response", err)
 	}
 
 	return &tokenResp, nil
 }
 
-// RefreshTokens implements the auth.NepseHTTP interface for the auth package
-func (h *HTTPClient) RefreshTokens(ctx context.Context, refreshToken string) (*auth.TokenResponse, error) {
+// RefreshTokens implements auth.NepseHTTP interface.
+func (h *nepseClient) RefreshTokens(ctx context.Context, refreshToken string) (*auth.TokenResponse, error) {
 	url := h.config.BaseURL + "/api/authenticate/refresh-token"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -113,7 +102,7 @@ func (h *HTTPClient) RefreshTokens(ctx context.Context, refreshToken string) (*a
 	}
 
 	req.Header.Set("Authorization", "Salter "+refreshToken)
-	h.setCommonHeaders(req, true)
+	h.setCommonHeaders(req)
 
 	resp, err := h.doRequest(req)
 	if err != nil {
@@ -125,29 +114,31 @@ func (h *HTTPClient) RefreshTokens(ctx context.Context, refreshToken string) (*a
 		return nil, MapHTTPStatusToError(resp.StatusCode, resp.Status)
 	}
 
-	body, err := h.getResponseBody(resp)
-	if err != nil {
-		return nil, NewInternalError("failed to read response body", err)
-	}
-	defer body.Close()
-
 	var tokenResp auth.TokenResponse
-	if err := json.NewDecoder(body).Decode(&tokenResp); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
 		return nil, NewInternalError("failed to decode token response", err)
 	}
 
 	return &tokenResp, nil
 }
 
-// doRequest performs HTTP request with retry logic
-func (h *HTTPClient) doRequest(req *http.Request) (*http.Response, error) {
+// doRequest performs HTTP request with retry logic.
+func (h *nepseClient) doRequest(req *http.Request) (*http.Response, error) {
 	var lastErr error
+	maxDelay := 30 * time.Second
 
 	for attempt := 0; attempt <= h.options.MaxRetries; attempt++ {
 		if attempt > 0 {
-			// Calculate backoff delay
-			delay := minDuration(h.options.RetryDelay*time.Duration(1<<uint(attempt-1)), 30*time.Second)
-			time.Sleep(delay)
+			delay := h.options.RetryDelay * time.Duration(1<<uint(attempt-1))
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+
+			select {
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			case <-time.After(delay):
+			}
 		}
 
 		resp, err := h.client.Do(req)
@@ -156,7 +147,6 @@ func (h *HTTPClient) doRequest(req *http.Request) (*http.Response, error) {
 			continue
 		}
 
-		// Check if we should retry based on status code
 		if resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests {
 			resp.Body.Close()
 			lastErr = MapHTTPStatusToError(resp.StatusCode, resp.Status)
@@ -172,15 +162,8 @@ func (h *HTTPClient) doRequest(req *http.Request) (*http.Response, error) {
 	return nil, lastErr
 }
 
-// getResponseBody handles gzip decompression
-func (h *HTTPClient) getResponseBody(resp *http.Response) (io.ReadCloser, error) {
-	// Let net/http handle decompression transparently.
-	return resp.Body, nil
-}
-
-// setCommonHeaders sets common HTTP headers for requests
-func (h *HTTPClient) setCommonHeaders(req *http.Request, _ bool) {
-	// Set headers from config
+// setCommonHeaders sets common HTTP headers for requests.
+func (h *nepseClient) setCommonHeaders(req *http.Request) {
 	for key, value := range h.config.Headers {
 		if key == "Host" {
 			req.Header.Set(key, strings.Replace(h.config.BaseURL, "https://", "", 1))
@@ -191,7 +174,6 @@ func (h *HTTPClient) setCommonHeaders(req *http.Request, _ bool) {
 		}
 	}
 
-	// Set additional headers for better browser mimicking
 	req.Header.Set("Sec-Ch-Ua", `"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"`)
 	req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
 	req.Header.Set("Sec-Ch-Ua-Platform", `"Linux"`)
@@ -201,13 +183,13 @@ func (h *HTTPClient) setCommonHeaders(req *http.Request, _ bool) {
 	req.Header.Set("Origin", h.config.BaseURL)
 }
 
-// apiRequest performs an authenticated API request
-func (h *HTTPClient) apiRequest(ctx context.Context, endpoint string, result any) error {
+// apiRequest performs an authenticated API request.
+func (h *nepseClient) apiRequest(ctx context.Context, endpoint string, result any) error {
 	return h.apiRequestWithRetry(ctx, endpoint, result, 0)
 }
 
-// apiRequestWithRetry performs an authenticated API request with token refresh retry
-func (h *HTTPClient) apiRequestWithRetry(ctx context.Context, endpoint string, result any, retryCount int) error {
+// apiRequestWithRetry performs an authenticated API request with token refresh retry.
+func (h *nepseClient) apiRequestWithRetry(ctx context.Context, endpoint string, result any, retryCount int) error {
 	token, err := h.authManager.AccessToken(ctx)
 	if err != nil {
 		return NewInternalError("failed to get access token", err)
@@ -219,10 +201,9 @@ func (h *HTTPClient) apiRequestWithRetry(ctx context.Context, endpoint string, r
 		return NewInternalError("failed to create request", err)
 	}
 
-	// Set authenticated headers
-	auth.AuthHeader(req, token)
+	auth.SetAuthHeader(req, token)
 	req.Header.Set("Content-Type", "application/json")
-	h.setCommonHeaders(req, true)
+	h.setCommonHeaders(req)
 
 	resp, err := h.doRequest(req)
 	if err != nil {
@@ -230,7 +211,6 @@ func (h *HTTPClient) apiRequestWithRetry(ctx context.Context, endpoint string, r
 	}
 	defer resp.Body.Close()
 
-	// Handle token expiration
 	if resp.StatusCode == http.StatusUnauthorized && retryCount == 0 {
 		if err := h.authManager.ForceUpdate(ctx); err != nil {
 			return NewInternalError("failed to refresh token", err)
@@ -242,39 +222,50 @@ func (h *HTTPClient) apiRequestWithRetry(ctx context.Context, endpoint string, r
 		return MapHTTPStatusToError(resp.StatusCode, resp.Status)
 	}
 
-	body, err := h.getResponseBody(resp)
-	if err != nil {
-		return NewInternalError("failed to read response body", err)
-	}
-	defer body.Close()
-
-	if err := json.NewDecoder(body).Decode(result); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return NewInternalError("failed to decode response", err)
 	}
 
 	return nil
 }
 
-// SetTLSVerification sets TLS verification on/off
-func (h *HTTPClient) SetTLSVerification(enabled bool) {
-	if transport, ok := h.client.Transport.(*http.Transport); ok {
-		transport.TLSClientConfig.InsecureSkipVerify = !enabled
+// apiRequestRaw performs an authenticated API request and returns raw body.
+func (h *nepseClient) apiRequestRaw(ctx context.Context, endpoint string) ([]byte, error) {
+	token, err := h.authManager.AccessToken(ctx)
+	if err != nil {
+		return nil, NewInternalError("failed to get access token", err)
 	}
-	h.options.TLSVerification = enabled
+
+	url := h.config.BaseURL + endpoint
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, NewInternalError("failed to create request", err)
+	}
+
+	auth.SetAuthHeader(req, token)
+	req.Header.Set("Content-Type", "application/json")
+	h.setCommonHeaders(req)
+
+	resp, err := h.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, MapHTTPStatusToError(resp.StatusCode, resp.Status)
+	}
+
+	return io.ReadAll(resp.Body)
 }
 
-// GetConfig returns the current configuration
-func (h *HTTPClient) GetConfig() *Config {
+// GetConfig returns the current configuration.
+func (h *nepseClient) GetConfig() *Config {
 	return h.config
 }
 
-// TestGetRequest performs a test GET request to any endpoint (for debugging)
-func (h *HTTPClient) TestGetRequest(ctx context.Context, endpoint string, result any) error {
-	return h.apiRequest(ctx, endpoint, result)
-}
-
-// Close closes the HTTP client and auth manager
-func (h *HTTPClient) Close(ctx context.Context) error {
+// Close closes the HTTP client and auth manager.
+func (h *nepseClient) Close(ctx context.Context) error {
 	if h.authManager != nil {
 		return h.authManager.Close(ctx)
 	}

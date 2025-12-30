@@ -5,14 +5,14 @@ import (
 	"net/http"
 )
 
-// NepseError represents different types of NEPSE API errors
+// NepseError represents different types of NEPSE API errors.
 type NepseError struct {
 	Type    ErrorType
 	Message string
 	Err     error
 }
 
-// ErrorType represents the category of NEPSE error
+// ErrorType represents the category of NEPSE error.
 type ErrorType string
 
 const (
@@ -26,28 +26,29 @@ const (
 	ErrorTypeInternal              ErrorType = "internal_error"
 )
 
-// Error implements the error interface
+// Error implements the error interface.
 func (e *NepseError) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("nepse %s: %s (%v)", e.Type, e.Message, e.Err)
+		return fmt.Sprintf("nepse %s: %s: %v", e.Type, e.Message, e.Err)
 	}
 	return fmt.Sprintf("nepse %s: %s", e.Type, e.Message)
 }
 
-// Unwrap returns the underlying error
+// Unwrap returns the underlying error.
 func (e *NepseError) Unwrap() error {
 	return e.Err
 }
 
-// Is checks if the error is of a specific type
+// Is checks if the error matches target error type.
 func (e *NepseError) Is(target error) bool {
-	if target, ok := target.(*NepseError); ok {
-		return e.Type == target.Type
+	t, ok := target.(*NepseError)
+	if !ok {
+		return false
 	}
-	return false
+	return e.Type == t.Type
 }
 
-// NewNepseError creates a new NEPSE error
+// NewNepseError creates a new NEPSE error.
 func NewNepseError(errorType ErrorType, message string, err error) *NepseError {
 	return &NepseError{
 		Type:    errorType,
@@ -56,47 +57,47 @@ func NewNepseError(errorType ErrorType, message string, err error) *NepseError {
 	}
 }
 
-// NewInvalidClientRequestError creates an invalid client request error
+// NewInvalidClientRequestError creates an invalid client request error.
 func NewInvalidClientRequestError(message string) *NepseError {
 	return NewNepseError(ErrorTypeInvalidClientRequest, message, nil)
 }
 
-// NewInvalidServerResponseError creates an invalid server response error
+// NewInvalidServerResponseError creates an invalid server response error.
 func NewInvalidServerResponseError(message string) *NepseError {
 	return NewNepseError(ErrorTypeInvalidServerResponse, message, nil)
 }
 
-// NewTokenExpiredError creates a token expired error
+// NewTokenExpiredError creates a token expired error.
 func NewTokenExpiredError() *NepseError {
 	return NewNepseError(ErrorTypeTokenExpired, "access token expired", nil)
 }
 
-// NewNetworkError creates a network error
+// NewNetworkError creates a network error.
 func NewNetworkError(err error) *NepseError {
 	return NewNepseError(ErrorTypeNetworkError, "network request failed", err)
 }
 
-// NewUnauthorizedError creates an unauthorized error
+// NewUnauthorizedError creates an unauthorized error.
 func NewUnauthorizedError(message string) *NepseError {
 	return NewNepseError(ErrorTypeUnauthorized, message, nil)
 }
 
-// NewNotFoundError creates a not found error
+// NewNotFoundError creates a not found error.
 func NewNotFoundError(resource string) *NepseError {
 	return NewNepseError(ErrorTypeNotFound, fmt.Sprintf("%s not found", resource), nil)
 }
 
-// NewRateLimitError creates a rate limit error
+// NewRateLimitError creates a rate limit error.
 func NewRateLimitError() *NepseError {
 	return NewNepseError(ErrorTypeRateLimit, "rate limit exceeded", nil)
 }
 
-// NewInternalError creates an internal error
+// NewInternalError creates an internal error.
 func NewInternalError(message string, err error) *NepseError {
 	return NewNepseError(ErrorTypeInternal, message, err)
 }
 
-// MapHTTPStatusToError maps HTTP status codes to NEPSE errors
+// MapHTTPStatusToError maps HTTP status codes to NEPSE errors.
 func MapHTTPStatusToError(statusCode int, message string) *NepseError {
 	switch statusCode {
 	case http.StatusBadRequest:
@@ -123,13 +124,11 @@ func MapHTTPStatusToError(statusCode int, message string) *NepseError {
 	}
 }
 
-// IsRetryable returns true if the error is potentially retryable
+// IsRetryable returns true if the error is potentially retryable.
 func (e *NepseError) IsRetryable() bool {
 	switch e.Type {
-	case ErrorTypeTokenExpired, ErrorTypeNetworkError, ErrorTypeInvalidServerResponse:
+	case ErrorTypeTokenExpired, ErrorTypeNetworkError, ErrorTypeInvalidServerResponse, ErrorTypeRateLimit:
 		return true
-	case ErrorTypeRateLimit:
-		return true // With backoff
 	default:
 		return false
 	}

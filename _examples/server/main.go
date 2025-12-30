@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voidarchive/nepseauth/nepse"
+	"github.com/voidarchive/go-nepse"
 )
 
 type app struct {
@@ -18,21 +18,14 @@ type app struct {
 }
 
 func main() {
-	// Config
 	host := getenv("HOST", "127.0.0.1")
 	port := getenv("PORT", "8081")
 	tlsVerify := getenv("TLS_VERIFY", "false") != "false"
 
-	// Create client
-	var (
-		c   nepse.Client
-		err error
-	)
-	if tlsVerify {
-		c, err = nepse.NewClientWithTLS(true)
-	} else {
-		c, err = nepse.NewClientWithTLS(false)
-	}
+	opts := nepse.DefaultOptions()
+	opts.TLSVerification = tlsVerify
+
+	c, err := nepse.NewClient(opts)
 	if err != nil {
 		log.Fatalf("failed to create nepse client: %v", err)
 	}
@@ -42,16 +35,13 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Health
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
 	})
 
-	// Docs
 	mux.HandleFunc("/docs", docsHTML)
 	mux.HandleFunc("/docs/openapi.json", docsOpenAPI)
 
-	// Test endpoints (invoke library calls)
 	mux.HandleFunc("/test/market/summary", a.handleMarketSummary)
 	mux.HandleFunc("/test/market/status", a.handleMarketStatus)
 	mux.HandleFunc("/test/top/gainers", a.handleTopGainers)
@@ -97,10 +87,7 @@ func (a *app) handleTopGainers(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
-// /test/security/{symbol}/...
 func (a *app) handleSecurityRoutes(w http.ResponseWriter, r *http.Request) {
-	// Expect /test/security/{symbol}/{action}
-	// actions: company | depth | history
 	p := strings.TrimPrefix(r.URL.Path, "/test/security/")
 	parts := strings.Split(p, "/")
 	if len(parts) == 0 || parts[0] == "" {
@@ -165,8 +152,6 @@ func (a *app) handleHistoryBySymbol(w http.ResponseWriter, r *http.Request, symb
 	writeJSON(w, http.StatusOK, h)
 }
 
-// --- Helpers ---
-
 func getenv(k, def string) string {
 	v := os.Getenv(k)
 	if v == "" {
@@ -196,11 +181,9 @@ func logRequests(next http.Handler) http.Handler {
 	})
 }
 
-// --- Docs ---
-
-func docsHTML(w http.ResponseWriter, r *http.Request) {
+func docsHTML(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	io := `<!doctype html>
+	html := `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -219,22 +202,22 @@ func docsHTML(w http.ResponseWriter, r *http.Request) {
     });
   }
   </script>
-  </head>
-  <body>
-    <div id="swagger-ui"></div>
-  </body>
-  </html>`
-	_, _ = w.Write([]byte(io))
+</head>
+<body>
+  <div id="swagger-ui"></div>
+</body>
+</html>`
+	_, _ = w.Write([]byte(html))
 }
 
-func docsOpenAPI(w http.ResponseWriter, r *http.Request) {
+func docsOpenAPI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write([]byte(openapiJSON))
 }
 
 const openapiJSON = `{
   "openapi": "3.0.3",
-  "info": {"title": "NEPSE Test Server (Library-backed)", "version": "1.0.0"},
+  "info": {"title": "NEPSE Test Server", "version": "1.0.0"},
   "servers": [{"url": "/"}],
   "paths": {
     "/health": {

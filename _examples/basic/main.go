@@ -7,22 +7,23 @@ import (
 	"log"
 	"time"
 
-	"github.com/voidarchive/nepseauth/nepse"
+	"github.com/voidarchive/go-nepse"
 )
 
 func main() {
-	// Flags to control optional sections
 	withGraphs := flag.Bool("with-graphs", false, "include graph endpoints in the run")
 	withFloor := flag.Bool("with-floorsheet", false, "include floorsheet endpoints in the run")
 	symbolFlag := flag.String("symbol", "NABIL", "symbol to use for symbol-based calls")
 	bizDateFlag := flag.String("business-date", "", "business date (YYYY-MM-DD) for today's prices and floorsheet; defaults to last weekday")
 	flag.Parse()
 
-	fmt.Println("🚀 NEPSE Go Library - Full API Example")
-	fmt.Println("======================================")
+	fmt.Println("NEPSE Go Library - Full API Example")
+	fmt.Println("====================================")
 
-	// For real use, set TLSVerification to true.
-	client, err := nepse.NewClientWithTLS(false)
+	opts := nepse.DefaultOptions()
+	opts.TLSVerification = false // For development only
+
+	client, err := nepse.NewClient(opts)
 	if err != nil {
 		log.Fatalf("Failed to create NEPSE client: %v", err)
 	}
@@ -35,14 +36,12 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
-	// Helper values
 	symbol := *symbolFlag
 	now := time.Now()
 	startDate := now.AddDate(0, 0, -30)
 	start := startDate.Format("2006-01-02")
 	end := startDate.Format("2006-01-02")
 	today := now.Format("2006-01-02")
-	// User-specified business date wins; else we decide based on market status below
 	userBizDate := *bizDateFlag
 
 	// 1) Market data
@@ -121,10 +120,6 @@ func main() {
 
 	// 3) Price & Trading
 	fmt.Println("\n[Trading] Today, History, Depth, Floor")
-	// Decide effective business date:
-	// - If user provided one, use it
-	// - Else if market is open, use today
-	// - Else use last weekday
 	effBizDate := userBizDate
 	if effBizDate == "" {
 		if marketOpen {
@@ -149,7 +144,6 @@ func main() {
 		} else {
 			fmt.Printf("- Depth(%s) buy/sell levels: %d/%d\n", symbol, len(md.BuyDepth), len(md.SellDepth))
 		}
-		// Floorsheet can be optionally exercised (often 403 or empty depending on day)
 		if *withFloor {
 			if fs, err := client.GetFloorSheetOf(ctx, nabilID, effBizDate); err != nil {
 				fmt.Printf("- Floorsheet(%s): error (%v)\n", effBizDate, err)
@@ -194,7 +188,7 @@ func main() {
 		fmt.Printf("- Top turnover: %d\n", len(v))
 	}
 
-	// 5) Graphs (main, sub-index, company)
+	// 5) Graphs
 	if *withGraphs {
 		fmt.Println("\n[Graphs] Main indices")
 		if g, err := client.GetDailyNepseIndexGraph(ctx); err != nil {
@@ -224,66 +218,6 @@ func main() {
 		} else {
 			fmt.Printf("- Banking pts: %d\n", len(g.Data))
 		}
-		if g, err := client.GetDailyDevelopmentBankSubindexGraph(ctx); err != nil {
-			log.Printf("DevBank graph: %v", err)
-		} else {
-			fmt.Printf("- DevBank pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyFinanceSubindexGraph(ctx); err != nil {
-			log.Printf("Finance graph: %v", err)
-		} else {
-			fmt.Printf("- Finance pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyHotelTourismSubindexGraph(ctx); err != nil {
-			log.Printf("Hotel graph: %v", err)
-		} else {
-			fmt.Printf("- Hotel pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyHydroSubindexGraph(ctx); err != nil {
-			log.Printf("Hydro graph: %v", err)
-		} else {
-			fmt.Printf("- Hydro pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyInvestmentSubindexGraph(ctx); err != nil {
-			log.Printf("Investment graph: %v", err)
-		} else {
-			fmt.Printf("- Investment pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyLifeInsuranceSubindexGraph(ctx); err != nil {
-			log.Printf("LifeIns graph: %v", err)
-		} else {
-			fmt.Printf("- LifeIns pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyManufacturingSubindexGraph(ctx); err != nil {
-			log.Printf("Manufacturing graph: %v", err)
-		} else {
-			fmt.Printf("- Manufacturing pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyMicrofinanceSubindexGraph(ctx); err != nil {
-			log.Printf("Microfinance graph: %v", err)
-		} else {
-			fmt.Printf("- Microfinance pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyMutualfundSubindexGraph(ctx); err != nil {
-			log.Printf("MutualFund graph: %v", err)
-		} else {
-			fmt.Printf("- MutualFund pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyNonLifeInsuranceSubindexGraph(ctx); err != nil {
-			log.Printf("NonLife graph: %v", err)
-		} else {
-			fmt.Printf("- NonLife pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyOthersSubindexGraph(ctx); err != nil {
-			log.Printf("Others graph: %v", err)
-		} else {
-			fmt.Printf("- Others pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyTradingSubindexGraph(ctx); err != nil {
-			log.Printf("Trading graph: %v", err)
-		} else {
-			fmt.Printf("- Trading pts: %d\n", len(g.Data))
-		}
 
 		fmt.Println("[Graphs] Company")
 		if g, err := client.GetDailyScripPriceGraphBySymbol(ctx, symbol); err != nil {
@@ -293,10 +227,9 @@ func main() {
 		}
 	}
 
-	fmt.Println("\n🎉 Finished exercising all public APIs.")
+	fmt.Println("\nFinished exercising all public APIs.")
 }
 
-// lastWeekday returns the last weekday date (Fri for Sat/Sun, else same day)
 func lastWeekday(t time.Time) time.Time {
 	switch t.Weekday() {
 	case time.Saturday:

@@ -1,16 +1,16 @@
 package nepse
 
-// Config holds static configuration data for the NEPSE API
+// Config holds static configuration data for the NEPSE API.
 type Config struct {
 	BaseURL      string
 	APIEndpoints map[string]string
 	Headers      map[string]string
 }
 
-// DefaultConfig returns the default NEPSE API configuration
+// DefaultConfig returns the default NEPSE API configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		BaseURL: "https://www.nepalstock.com",
+		BaseURL: DefaultBaseURL,
 		APIEndpoints: map[string]string{
 			"price_volume":                       "/api/nots/securityDailyTradeStat/58",
 			"market_summary":                     "/api/nots/market-summary/",
@@ -50,15 +50,13 @@ func DefaultConfig() *Config {
 			"live_market":                        "/api/nots/lives-market",
 			"market_depth":                       "/api/nots/nepse-data/marketdepth/",
 		},
-        Headers: map[string]string{
-            "User-Agent":      "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0",
-            "Accept":          "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.5",
-            // Note: Deliberately omit Accept-Encoding to allow net/http to auto-handle gzip.
-            // Also omit Connection to enable keep-alives.
-            "Pragma":          "no-cache",
-            "Cache-Control":   "no-cache",
-            "TE":              "Trailers",
-        },
+		Headers: map[string]string{
+			"User-Agent":      "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0",
+			"Accept":          "application/json, text/plain, */*",
+			"Accept-Language": "en-US,en;q=0.5",
+			"Pragma":          "no-cache",
+			"Cache-Control":   "no-cache",
+			"TE":              "Trailers",
+		},
 	}
 }

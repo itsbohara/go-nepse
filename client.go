@@ -1,12 +1,12 @@
 package nepse
 
 import (
-    "context"
-    "net/http"
-    "time"
+	"context"
+	"net/http"
+	"time"
 )
 
-// Client defines the interface for NEPSE API operations
+// Client defines the interface for NEPSE API operations.
 type Client interface {
 	// Market Data Methods
 	GetMarketSummary(ctx context.Context) (*MarketSummary, error)
@@ -27,8 +27,8 @@ type Client interface {
 	GetPriceVolumeHistory(ctx context.Context, securityID int32, startDate, endDate string) ([]PriceHistory, error)
 	GetPriceVolumeHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error)
 	GetSupplyDemand(ctx context.Context) ([]SupplyDemandEntry, error)
-    GetMarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error)
-    GetMarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error)
+	GetMarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error)
+	GetMarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error)
 
 	// Top Lists
 	GetTopGainers(ctx context.Context) ([]TopListEntry, error)
@@ -70,42 +70,41 @@ type Client interface {
 	FindSecurityBySymbol(ctx context.Context, symbol string) (*Security, error)
 
 	// Configuration
-	SetTLSVerification(enabled bool)
 	GetConfig() *Config
 
 	// Lifecycle
 	Close(ctx context.Context) error
 }
 
-// Options represents configuration options for creating a new NEPSE client
+// Options represents configuration options for creating a new NEPSE client.
 type Options struct {
-    // BaseURL overrides the default NEPSE API base URL
-    BaseURL string
+	// BaseURL overrides the default NEPSE API base URL.
+	BaseURL string
 
-	// TLSVerification enables/disables TLS certificate verification
+	// TLSVerification enables/disables TLS certificate verification.
 	TLSVerification bool
 
-	// HTTPTimeout sets the HTTP request timeout
+	// HTTPTimeout sets the HTTP request timeout.
 	HTTPTimeout time.Duration
 
-	// MaxRetries sets the maximum number of retries for failed requests
+	// MaxRetries sets the maximum number of retries for failed requests.
 	MaxRetries int
 
-    // RetryDelay sets the base delay between retries
-    RetryDelay time.Duration
+	// RetryDelay sets the base delay between retries.
+	RetryDelay time.Duration
 
-    // Config overrides the default configuration
-    Config *Config
+	// Config overrides the default configuration.
+	Config *Config
 
-    // HTTPClient allows supplying a custom *http.Client.
-    // If nil, a sane default client and transport are created using other options.
-    HTTPClient *http.Client
+	// HTTPClient allows supplying a custom *http.Client.
+	// If nil, a default client with sensible settings is created.
+	HTTPClient *http.Client
 }
 
-// DefaultOptions returns default options for the NEPSE client
+// DefaultOptions returns default options for the NEPSE client.
 func DefaultOptions() *Options {
 	return &Options{
-		BaseURL:         "https://www.nepalstock.com",
+		BaseURL:         DefaultBaseURL,
 		TLSVerification: true,
 		HTTPTimeout:     30 * time.Second,
 		MaxRetries:      3,
@@ -113,3 +112,37 @@ func DefaultOptions() *Options {
 		Config:          DefaultConfig(),
 	}
 }
+
+// NewClient creates a new NEPSE API client with the given options.
+// If options is nil, default options will be used.
+func NewClient(options *Options) (Client, error) {
+	if options == nil {
+		options = DefaultOptions()
+	}
+	return newHTTPClient(options)
+}
+
+// NewClientWithDefaults creates a new NEPSE API client with default settings.
+// This is a convenience function equivalent to NewClient(nil).
+func NewClientWithDefaults() (Client, error) {
+	return NewClient(nil)
+}
+
+// Predefined error instances for common error checking.
+// Use with errors.Is() for error type checking.
+var (
+	// ErrTokenExpired indicates the access token has expired.
+	ErrTokenExpired = NewTokenExpiredError()
+
+	// ErrNetworkError indicates a network-related failure.
+	ErrNetworkError = NewNetworkError(nil)
+
+	// ErrUnauthorized indicates an authorization failure.
+	ErrUnauthorized = NewUnauthorizedError("unauthorized")
+
+	// ErrNotFound indicates the requested resource was not found.
+	ErrNotFound = NewNotFoundError("resource")
+
+	// ErrRateLimit indicates the API rate limit was exceeded.
+	ErrRateLimit = NewRateLimitError()
+)
