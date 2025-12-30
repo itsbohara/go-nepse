@@ -1,107 +1,32 @@
 package nepse
 
 import (
-	"context"
 	"net/http"
 	"time"
+
+	"github.com/voidarchive/go-nepse/internal/auth"
 )
 
-// Client defines the interface for NEPSE API operations.
-type Client interface {
-	// Market Data Methods
-	GetMarketSummary(ctx context.Context) (*MarketSummary, error)
-	GetMarketStatus(ctx context.Context) (*MarketStatus, error)
-	GetNepseIndex(ctx context.Context) (*NepseIndex, error)
-	GetNepseSubIndices(ctx context.Context) ([]SubIndex, error)
-	GetLiveMarket(ctx context.Context) ([]LiveMarketEntry, error)
-
-	// Security and Company Methods
-	GetSecurityList(ctx context.Context) ([]Security, error)
-	GetCompanyList(ctx context.Context) ([]Company, error)
-	GetCompanyDetails(ctx context.Context, securityID int32) (*CompanyDetails, error)
-	GetCompanyDetailsBySymbol(ctx context.Context, symbol string) (*CompanyDetails, error)
-	GetSectorScrips(ctx context.Context) (SectorScrips, error)
-
-	// Price and Trading Data
-	GetTodaysPrices(ctx context.Context, businessDate string) ([]TodayPrice, error)
-	GetPriceVolumeHistory(ctx context.Context, securityID int32, startDate, endDate string) ([]PriceHistory, error)
-	GetPriceVolumeHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error)
-	GetSupplyDemand(ctx context.Context) ([]SupplyDemandEntry, error)
-	GetMarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error)
-	GetMarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error)
-
-	// Top Lists
-	GetTopGainers(ctx context.Context) ([]TopListEntry, error)
-	GetTopLosers(ctx context.Context) ([]TopListEntry, error)
-	GetTopTenTrade(ctx context.Context) ([]TopListEntry, error)
-	GetTopTenTransaction(ctx context.Context) ([]TopListEntry, error)
-	GetTopTenTurnover(ctx context.Context) ([]TopListEntry, error)
-
-	// Floor Sheet
-	GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, error)
-	GetFloorSheetOf(ctx context.Context, securityID int32, businessDate string) ([]FloorSheetEntry, error)
-	GetFloorSheetBySymbol(ctx context.Context, symbol string, businessDate string) ([]FloorSheetEntry, error)
-
-	// Graph Data (GET endpoints)
-	GetDailyNepseIndexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailySensitiveIndexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyFloatIndexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailySensitiveFloatIndexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyScripPriceGraph(ctx context.Context, securityID int32) (*GraphResponse, error)
-	GetDailyScripPriceGraphBySymbol(ctx context.Context, symbol string) (*GraphResponse, error)
-
-	// Sub-Index Graphs
-	GetDailyBankSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyDevelopmentBankSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyFinanceSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyHotelTourismSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyHydroSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyInvestmentSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyLifeInsuranceSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyManufacturingSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyMicrofinanceSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyMutualfundSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyNonLifeInsuranceSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyOthersSubindexGraph(ctx context.Context) (*GraphResponse, error)
-	GetDailyTradingSubindexGraph(ctx context.Context) (*GraphResponse, error)
-
-	// Helper Methods
-	FindSecurity(ctx context.Context, securityID int32) (*Security, error)
-	FindSecurityBySymbol(ctx context.Context, symbol string) (*Security, error)
-
-	// Configuration
-	GetConfig() *Config
-
-	// Lifecycle - implements io.Closer
-	Close() error
+// Client is the NEPSE API client. Use [NewClient] to create one.
+type Client struct {
+	httpClient  *http.Client
+	config      *Config
+	authManager *auth.Manager
+	options     *Options
 }
 
-// Options represents configuration options for creating a new NEPSE client.
+// Options configures the NEPSE client.
 type Options struct {
-	// BaseURL overrides the default NEPSE API base URL.
-	BaseURL string
-
-	// TLSVerification enables/disables TLS certificate verification.
-	TLSVerification bool
-
-	// HTTPTimeout sets the HTTP request timeout.
-	HTTPTimeout time.Duration
-
-	// MaxRetries sets the maximum number of retries for failed requests.
-	MaxRetries int
-
-	// RetryDelay sets the base delay between retries.
-	RetryDelay time.Duration
-
-	// Config overrides the default configuration.
-	Config *Config
-
-	// HTTPClient allows supplying a custom *http.Client.
-	// If nil, a default client with sensible settings is created.
-	HTTPClient *http.Client
+	BaseURL         string        // Override default API URL (useful for testing/proxying)
+	TLSVerification bool          // Set false only for development; NEPSE uses self-signed certs
+	HTTPTimeout     time.Duration // Per-request timeout
+	MaxRetries      int           // Retry count for transient failures (5xx, rate limits)
+	RetryDelay      time.Duration // Base delay; actual delay uses exponential backoff
+	Config          *Config       // API endpoint paths and headers
+	HTTPClient      *http.Client  // Bring your own client; nil uses sensible defaults
 }
 
-// DefaultOptions returns default options for the NEPSE client.
+// DefaultOptions returns sensible defaults for the NEPSE client.
 func DefaultOptions() *Options {
 	return &Options{
 		BaseURL:         DefaultBaseURL,
@@ -113,36 +38,27 @@ func DefaultOptions() *Options {
 	}
 }
 
-// NewClient creates a new NEPSE API client with the given options.
-// If options is nil, default options will be used.
-func NewClient(options *Options) (Client, error) {
+// NewClient creates a NEPSE API client.
+// If options is nil, DefaultOptions() is used.
+func NewClient(options *Options) (*Client, error) {
 	if options == nil {
 		options = DefaultOptions()
 	}
-	return newHTTPClient(options)
+	if options.Config == nil {
+		options.Config = DefaultConfig()
+	}
+	return initClient(options)
 }
 
-// NewClientWithDefaults creates a new NEPSE API client with default settings.
-// This is a convenience function equivalent to NewClient(nil).
-func NewClientWithDefaults() (Client, error) {
-	return NewClient(nil)
+// GetConfig returns the client's configuration.
+func (c *Client) GetConfig() *Config {
+	return c.config
 }
 
-// Predefined error instances for common error checking.
-// Use with errors.Is() for error type checking.
-var (
-	// ErrTokenExpired indicates the access token has expired.
-	ErrTokenExpired = NewTokenExpiredError()
-
-	// ErrNetworkError indicates a network-related failure.
-	ErrNetworkError = NewNetworkError(nil)
-
-	// ErrUnauthorized indicates an authorization failure.
-	ErrUnauthorized = NewUnauthorizedError("unauthorized")
-
-	// ErrNotFound indicates the requested resource was not found.
-	ErrNotFound = NewNotFoundError("resource")
-
-	// ErrRateLimit indicates the API rate limit was exceeded.
-	ErrRateLimit = NewRateLimitError()
-)
+// Close releases resources held by the client.
+func (c *Client) Close() error {
+	if c.authManager != nil {
+		return c.authManager.Close()
+	}
+	return nil
+}

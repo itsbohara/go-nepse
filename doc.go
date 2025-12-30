@@ -65,9 +65,6 @@ const (
 
 	// UserAgent is the default user agent string used by the client.
 	UserAgent = "go-nepse/" + Version
-
-	// DefaultBaseURL is the default NEPSE API base URL.
-	DefaultBaseURL = "https://www.nepalstock.com"
 )
 
 // Common business date formats used by the NEPSE API.

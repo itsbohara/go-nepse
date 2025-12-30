@@ -8,9 +8,9 @@ import (
 )
 
 // GetMarketSummary retrieves the overall market summary.
-func (h *nepseClient) GetMarketSummary(ctx context.Context) (*MarketSummary, error) {
+func (c *Client) GetMarketSummary(ctx context.Context) (*MarketSummary, error) {
 	var rawItems []MarketSummaryItem
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["market_summary"], &rawItems); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.MarketSummary, &rawItems); err != nil {
 		return nil, err
 	}
 
@@ -36,18 +36,18 @@ func (h *nepseClient) GetMarketSummary(ctx context.Context) (*MarketSummary, err
 }
 
 // GetMarketStatus retrieves the current market status.
-func (h *nepseClient) GetMarketStatus(ctx context.Context) (*MarketStatus, error) {
+func (c *Client) GetMarketStatus(ctx context.Context) (*MarketStatus, error) {
 	var status MarketStatus
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["market_open"], &status); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.MarketOpen, &status); err != nil {
 		return nil, err
 	}
 	return &status, nil
 }
 
 // GetNepseIndex retrieves the NEPSE index information.
-func (h *nepseClient) GetNepseIndex(ctx context.Context) (*NepseIndex, error) {
+func (c *Client) GetNepseIndex(ctx context.Context) (*NepseIndex, error) {
 	var rawIndices []NepseIndexRaw
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["nepse_index"], &rawIndices); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.NepseIndex, &rawIndices); err != nil {
 		return nil, err
 	}
 
@@ -72,9 +72,9 @@ func (h *nepseClient) GetNepseIndex(ctx context.Context) (*NepseIndex, error) {
 }
 
 // GetNepseSubIndices retrieves all NEPSE sub-indices.
-func (h *nepseClient) GetNepseSubIndices(ctx context.Context) ([]SubIndex, error) {
+func (c *Client) GetNepseSubIndices(ctx context.Context) ([]SubIndex, error) {
 	var rawIndices []NepseIndexRaw
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["nepse_index"], &rawIndices); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.NepseIndex, &rawIndices); err != nil {
 		return nil, err
 	}
 
@@ -97,24 +97,24 @@ func (h *nepseClient) GetNepseSubIndices(ctx context.Context) ([]SubIndex, error
 }
 
 // GetLiveMarket retrieves live market data.
-func (h *nepseClient) GetLiveMarket(ctx context.Context) ([]LiveMarketEntry, error) {
+func (c *Client) GetLiveMarket(ctx context.Context) ([]LiveMarketEntry, error) {
 	var liveMarket []LiveMarketEntry
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["live_market"], &liveMarket); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.LiveMarket, &liveMarket); err != nil {
 		return nil, err
 	}
 	return liveMarket, nil
 }
 
 // GetSupplyDemand retrieves supply and demand data.
-func (h *nepseClient) GetSupplyDemand(ctx context.Context) ([]SupplyDemandEntry, error) {
-	endpoint := h.config.APIEndpoints["supply_demand"]
+func (c *Client) GetSupplyDemand(ctx context.Context) ([]SupplyDemandEntry, error) {
+	endpoint := c.config.Endpoints.SupplyDemand
 
 	var arr []SupplyDemandEntry
-	if err := h.apiRequest(ctx, endpoint, &arr); err == nil {
+	if err := c.apiRequest(ctx, endpoint, &arr); err == nil {
 		return arr, nil
 	}
 
-	data, err := h.apiRequestRaw(ctx, endpoint)
+	data, err := c.apiRequestRaw(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -146,132 +146,132 @@ func (h *nepseClient) GetSupplyDemand(ctx context.Context) ([]SupplyDemandEntry,
 }
 
 // GetTopGainers retrieves the top gainers list.
-func (h *nepseClient) GetTopGainers(ctx context.Context) ([]TopListEntry, error) {
+func (c *Client) GetTopGainers(ctx context.Context) ([]TopListEntry, error) {
 	var topGainers []TopListEntry
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["top_gainers"], &topGainers); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.TopGainers, &topGainers); err != nil {
 		return nil, err
 	}
 	return topGainers, nil
 }
 
 // GetTopLosers retrieves the top losers list.
-func (h *nepseClient) GetTopLosers(ctx context.Context) ([]TopListEntry, error) {
+func (c *Client) GetTopLosers(ctx context.Context) ([]TopListEntry, error) {
 	var topLosers []TopListEntry
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["top_losers"], &topLosers); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.TopLosers, &topLosers); err != nil {
 		return nil, err
 	}
 	return topLosers, nil
 }
 
 // GetTopTenTrade retrieves the top ten trade list.
-func (h *nepseClient) GetTopTenTrade(ctx context.Context) ([]TopListEntry, error) {
+func (c *Client) GetTopTenTrade(ctx context.Context) ([]TopListEntry, error) {
 	var topTrade []TopListEntry
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["top_ten_trade"], &topTrade); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.TopTrade, &topTrade); err != nil {
 		return nil, err
 	}
 	return topTrade, nil
 }
 
 // GetTopTenTransaction retrieves the top ten transaction list.
-func (h *nepseClient) GetTopTenTransaction(ctx context.Context) ([]TopListEntry, error) {
+func (c *Client) GetTopTenTransaction(ctx context.Context) ([]TopListEntry, error) {
 	var topTransaction []TopListEntry
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["top_ten_transaction"], &topTransaction); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.TopTransaction, &topTransaction); err != nil {
 		return nil, err
 	}
 	return topTransaction, nil
 }
 
 // GetTopTenTurnover retrieves the top ten turnover list.
-func (h *nepseClient) GetTopTenTurnover(ctx context.Context) ([]TopListEntry, error) {
+func (c *Client) GetTopTenTurnover(ctx context.Context) ([]TopListEntry, error) {
 	var topTurnover []TopListEntry
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["top_ten_turnover"], &topTurnover); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.TopTurnover, &topTurnover); err != nil {
 		return nil, err
 	}
 	return topTurnover, nil
 }
 
 // GetTodaysPrices retrieves today's price data.
-func (h *nepseClient) GetTodaysPrices(ctx context.Context, businessDate string) ([]TodayPrice, error) {
-	endpoint := h.config.APIEndpoints["todays_price"]
+func (c *Client) GetTodaysPrices(ctx context.Context, businessDate string) ([]TodayPrice, error) {
+	endpoint := c.config.Endpoints.TodaysPrice
 	if businessDate != "" {
 		endpoint += "?businessDate=" + businessDate + "&size=500"
 	}
 
 	var todayPrices []TodayPrice
-	if err := h.apiRequest(ctx, endpoint, &todayPrices); err != nil {
+	if err := c.apiRequest(ctx, endpoint, &todayPrices); err != nil {
 		return nil, err
 	}
 	return todayPrices, nil
 }
 
 // GetPriceVolumeHistory retrieves price volume history for a security by ID.
-func (h *nepseClient) GetPriceVolumeHistory(ctx context.Context, securityID int32, startDate, endDate string) ([]PriceHistory, error) {
+func (c *Client) GetPriceVolumeHistory(ctx context.Context, securityID int32, startDate, endDate string) ([]PriceHistory, error) {
 	endpoint := fmt.Sprintf("%s%d?size=500&startDate=%s&endDate=%s",
-		h.config.APIEndpoints["company_price_volume_history"], securityID, startDate, endDate)
+		c.config.Endpoints.CompanyPriceHistory, securityID, startDate, endDate)
 
 	var response struct {
 		Content []PriceHistory `json:"content"`
 	}
 
-	if err := h.apiRequest(ctx, endpoint, &response); err != nil {
+	if err := c.apiRequest(ctx, endpoint, &response); err != nil {
 		return nil, err
 	}
 	return response.Content, nil
 }
 
 // GetPriceVolumeHistoryBySymbol retrieves price volume history for a security by symbol.
-func (h *nepseClient) GetPriceVolumeHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error) {
-	security, err := h.findSecurityBySymbol(ctx, symbol)
+func (c *Client) GetPriceVolumeHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error) {
+	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return h.GetPriceVolumeHistory(ctx, security.ID, startDate, endDate)
+	return c.GetPriceVolumeHistory(ctx, security.ID, startDate, endDate)
 }
 
 // GetMarketDepth retrieves market depth information for a security by ID.
-func (h *nepseClient) GetMarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error) {
-	endpoint := fmt.Sprintf("%s%d/", h.config.APIEndpoints["market_depth"], securityID)
+func (c *Client) GetMarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error) {
+	endpoint := fmt.Sprintf("%s%d/", c.config.Endpoints.MarketDepth, securityID)
 
 	var marketDepth MarketDepth
-	if err := h.apiRequest(ctx, endpoint, &marketDepth); err != nil {
+	if err := c.apiRequest(ctx, endpoint, &marketDepth); err != nil {
 		return nil, err
 	}
 	return &marketDepth, nil
 }
 
 // GetMarketDepthBySymbol retrieves market depth information for a security by symbol.
-func (h *nepseClient) GetMarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error) {
-	security, err := h.findSecurityBySymbol(ctx, symbol)
+func (c *Client) GetMarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error) {
+	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return h.GetMarketDepth(ctx, security.ID)
+	return c.GetMarketDepth(ctx, security.ID)
 }
 
 // GetSecurityList retrieves the list of all securities.
-func (h *nepseClient) GetSecurityList(ctx context.Context) ([]Security, error) {
+func (c *Client) GetSecurityList(ctx context.Context) ([]Security, error) {
 	var securities []Security
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["security_list"], &securities); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.SecurityList, &securities); err != nil {
 		return nil, err
 	}
 	return securities, nil
 }
 
 // GetCompanyList retrieves the list of all companies.
-func (h *nepseClient) GetCompanyList(ctx context.Context) ([]Company, error) {
+func (c *Client) GetCompanyList(ctx context.Context) ([]Company, error) {
 	var companies []Company
-	if err := h.apiRequest(ctx, h.config.APIEndpoints["company_list"], &companies); err != nil {
+	if err := c.apiRequest(ctx, c.config.Endpoints.CompanyList, &companies); err != nil {
 		return nil, err
 	}
 	return companies, nil
 }
 
 // GetCompanyDetails retrieves detailed information about a specific company/security by ID.
-func (h *nepseClient) GetCompanyDetails(ctx context.Context, securityID int32) (*CompanyDetails, error) {
-	endpoint := fmt.Sprintf("%s%d", h.config.APIEndpoints["company_details"], securityID)
+func (c *Client) GetCompanyDetails(ctx context.Context, securityID int32) (*CompanyDetails, error) {
+	endpoint := fmt.Sprintf("%s%d", c.config.Endpoints.CompanyDetails, securityID)
 
 	var rawDetails CompanyDetailsRaw
-	if err := h.apiRequest(ctx, endpoint, &rawDetails); err != nil {
+	if err := c.apiRequest(ctx, endpoint, &rawDetails); err != nil {
 		return nil, err
 	}
 
@@ -302,17 +302,17 @@ func (h *nepseClient) GetCompanyDetails(ctx context.Context, securityID int32) (
 }
 
 // GetCompanyDetailsBySymbol retrieves detailed information about a specific company/security by symbol.
-func (h *nepseClient) GetCompanyDetailsBySymbol(ctx context.Context, symbol string) (*CompanyDetails, error) {
-	security, err := h.findSecurityBySymbol(ctx, symbol)
+func (c *Client) GetCompanyDetailsBySymbol(ctx context.Context, symbol string) (*CompanyDetails, error) {
+	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return h.GetCompanyDetails(ctx, security.ID)
+	return c.GetCompanyDetails(ctx, security.ID)
 }
 
 // GetSectorScrips groups securities by their sector.
-func (h *nepseClient) GetSectorScrips(ctx context.Context) (SectorScrips, error) {
-	securities, err := h.GetSecurityList(ctx)
+func (c *Client) GetSectorScrips(ctx context.Context) (SectorScrips, error) {
+	securities, err := c.GetSecurityList(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -344,21 +344,21 @@ func (h *nepseClient) GetSectorScrips(ctx context.Context) (SectorScrips, error)
 }
 
 // FindSecurity finds a security by ID.
-func (h *nepseClient) FindSecurity(ctx context.Context, securityID int32) (*Security, error) {
-	return h.findSecurityByID(ctx, securityID)
+func (c *Client) FindSecurity(ctx context.Context, securityID int32) (*Security, error) {
+	return c.findSecurityByID(ctx, securityID)
 }
 
 // FindSecurityBySymbol finds a security by symbol.
-func (h *nepseClient) FindSecurityBySymbol(ctx context.Context, symbol string) (*Security, error) {
-	return h.findSecurityBySymbol(ctx, symbol)
+func (c *Client) FindSecurityBySymbol(ctx context.Context, symbol string) (*Security, error) {
+	return c.findSecurityBySymbol(ctx, symbol)
 }
 
-func (h *nepseClient) findSecurityByID(ctx context.Context, id int32) (*Security, error) {
+func (c *Client) findSecurityByID(ctx context.Context, id int32) (*Security, error) {
 	if id <= 0 {
 		return nil, NewInvalidClientRequestError("security ID must be positive")
 	}
 
-	securities, err := h.GetSecurityList(ctx)
+	securities, err := c.GetSecurityList(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -372,13 +372,13 @@ func (h *nepseClient) findSecurityByID(ctx context.Context, id int32) (*Security
 	return nil, NewNotFoundError(fmt.Sprintf("security with ID %d", id))
 }
 
-func (h *nepseClient) findSecurityBySymbol(ctx context.Context, symbol string) (*Security, error) {
+func (c *Client) findSecurityBySymbol(ctx context.Context, symbol string) (*Security, error) {
 	symbol = strings.ToUpper(strings.TrimSpace(symbol))
 	if symbol == "" {
 		return nil, NewInvalidClientRequestError("symbol cannot be empty")
 	}
 
-	securities, err := h.GetSecurityList(ctx)
+	securities, err := c.GetSecurityList(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -393,16 +393,16 @@ func (h *nepseClient) findSecurityBySymbol(ctx context.Context, symbol string) (
 }
 
 // GetFloorSheet retrieves the complete floor sheet data.
-func (h *nepseClient) GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, error) {
-	endpoint := fmt.Sprintf("%s?size=500&sort=contractId,desc", h.config.APIEndpoints["floor_sheet"])
+func (c *Client) GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, error) {
+	endpoint := fmt.Sprintf("%s?size=500&sort=contractId,desc", c.config.Endpoints.FloorSheet)
 
 	var floorSheetArray []FloorSheetEntry
-	if err := h.apiRequest(ctx, endpoint, &floorSheetArray); err == nil {
+	if err := c.apiRequest(ctx, endpoint, &floorSheetArray); err == nil {
 		return floorSheetArray, nil
 	}
 
 	var firstPage FloorSheetResponse
-	if err := h.apiRequest(ctx, endpoint, &firstPage); err != nil {
+	if err := c.apiRequest(ctx, endpoint, &firstPage); err != nil {
 		return nil, err
 	}
 
@@ -411,7 +411,7 @@ func (h *nepseClient) GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, err
 	for p := int32(1); p < total; p++ {
 		pageEndpoint := fmt.Sprintf("%s&page=%d", endpoint, p)
 		var page FloorSheetResponse
-		if err := h.apiRequest(ctx, pageEndpoint, &page); err != nil {
+		if err := c.apiRequest(ctx, pageEndpoint, &page); err != nil {
 			return nil, err
 		}
 		all = append(all, page.FloorSheets.Content...)
@@ -420,12 +420,12 @@ func (h *nepseClient) GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, err
 }
 
 // GetFloorSheetOf retrieves floor sheet data for a specific security on a specific business date by ID.
-func (h *nepseClient) GetFloorSheetOf(ctx context.Context, securityID int32, businessDate string) ([]FloorSheetEntry, error) {
+func (c *Client) GetFloorSheetOf(ctx context.Context, securityID int32, businessDate string) ([]FloorSheetEntry, error) {
 	endpoint := fmt.Sprintf("%s%d?businessDate=%s&size=500&sort=contractid,desc",
-		h.config.APIEndpoints["company_floorsheet"], securityID, businessDate)
+		c.config.Endpoints.CompanyFloorsheet, securityID, businessDate)
 
 	var firstPage FloorSheetResponse
-	if err := h.apiRequest(ctx, endpoint, &firstPage); err != nil {
+	if err := c.apiRequest(ctx, endpoint, &firstPage); err != nil {
 		return nil, err
 	}
 
@@ -440,7 +440,7 @@ func (h *nepseClient) GetFloorSheetOf(ctx context.Context, securityID int32, bus
 		pageEndpoint := fmt.Sprintf("%s&page=%d", endpoint, page)
 
 		var pageResponse FloorSheetResponse
-		if err := h.apiRequest(ctx, pageEndpoint, &pageResponse); err != nil {
+		if err := c.apiRequest(ctx, pageEndpoint, &pageResponse); err != nil {
 			return nil, err
 		}
 
@@ -451,10 +451,10 @@ func (h *nepseClient) GetFloorSheetOf(ctx context.Context, securityID int32, bus
 }
 
 // GetFloorSheetBySymbol retrieves floor sheet data for a specific security by symbol.
-func (h *nepseClient) GetFloorSheetBySymbol(ctx context.Context, symbol string, businessDate string) ([]FloorSheetEntry, error) {
-	security, err := h.findSecurityBySymbol(ctx, symbol)
+func (c *Client) GetFloorSheetBySymbol(ctx context.Context, symbol string, businessDate string) ([]FloorSheetEntry, error) {
+	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return h.GetFloorSheetOf(ctx, security.ID, businessDate)
+	return c.GetFloorSheetOf(ctx, security.ID, businessDate)
 }
