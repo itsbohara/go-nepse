@@ -82,7 +82,7 @@ func main() {
 	if sd, err := client.GetSupplyDemand(ctx); err != nil {
 		log.Printf("Supply/Demand: %v", err)
 	} else {
-		fmt.Printf("- Supply/Demand entries: %d\n", len(sd))
+		fmt.Printf("- Supply: %d entries, Demand: %d entries\n", len(sd.SupplyList), len(sd.DemandList))
 	}
 
 	// 2) Securities & Companies
@@ -142,7 +142,7 @@ func main() {
 		if md, err := client.GetMarketDepthBySymbol(ctx, symbol); err != nil {
 			fmt.Printf("- Market depth(%s): unavailable (%v)\n", symbol, err)
 		} else {
-			fmt.Printf("- Depth(%s) buy/sell levels: %d/%d\n", symbol, len(md.BuyDepth), len(md.SellDepth))
+			fmt.Printf("- Depth(%s) buy/sell qty: %d/%d, levels: %d/%d\n", symbol, md.TotalBuyQty, md.TotalSellQty, len(md.BuyDepth), len(md.SellDepth))
 		}
 		if *withFloor {
 			if fs, err := client.GetFloorSheetOf(ctx, nabilID, effBizDate); err != nil {

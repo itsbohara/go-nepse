@@ -55,11 +55,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Graph endpoints currently return empty data due to NEPSE API backend issues
 - This is a server-side issue, not a client library issue
 
+## [0.1.1] - 2025-12-31
+
+### Fixed
+
+- **GetCompanyDetails**: Fixed missing `/` in endpoint URL causing 404 errors
+- **GetPriceVolumeHistory**: Fixed missing `/` in endpoint URL causing 404 errors
+- **GetMarketDepth**: Fixed missing `/` in endpoint URL and updated response type to match API
+- **GetFloorSheetOf**: Fixed missing `/` in endpoint URL
+- **GetDailyScripPriceGraph**: Fixed missing `/` in endpoint URL
+- **GetSupplyDemand**: Changed return type to match actual API response format (`*SupplyDemandData`)
+- **GetSectorScrips**: Now uses company list which includes sector information
+- **GetNepseSubIndices**: Fixed filtering logic, uses map-based exclusion
+- **PriceHistory**: Updated struct to match actual API response fields
+- **MarketDepth**: Updated struct to match actual API response format
+- Pointer to loop variable bugs in `findSecurityByID` and `findSecurityBySymbol`
+- Silently swallowed errors in `GetSupplyDemand` and `GetFloorSheet`
+- All lint issues (unchecked error returns in transport.go)
+- URL encoding now uses `url.Values` for proper escaping
+
+### Changed
+
+- **BREAKING**: `GetSupplyDemand()` now returns `*SupplyDemandData` instead of `[]SupplyDemandEntry`
+- Added constants for NEPSE index IDs (58, 57, 62, 63)
+- Improved all doc comments to be more descriptive
+- Refactored graphs.go to use `IndexType` enum and reduce code duplication
+
+### Removed
+
+- Unused `SupplyDemandEntry` type (replaced by `SupplyDemandData`)
+
 ## [Unreleased]
 
 ### Planned
 
-- Graph endpoint functionality (pending NEPSE backend fix)
+- Unit tests for core functionality
+- Integration tests
 - Rate limiting improvements
-- Additional security enhancements
-- Performance monitoring hooks

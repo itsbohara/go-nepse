@@ -29,7 +29,7 @@ func initClient(options *Options) (*Client, error) {
 			Transport: transport,
 		}
 	}
-	// Note: We don't modify user-provided http.Client; users are responsible for setting timeout.
+	// NOTE: Don't modify user-provided http.Client; users are responsible for setting timeout.
 
 	c := &Client{
 		httpClient: hc,
@@ -61,7 +61,7 @@ func (c *Client) GetToken(ctx context.Context) (*auth.TokenResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, MapHTTPStatusToError(resp.StatusCode, resp.Status)
@@ -100,7 +100,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 
 		// Retry on server errors and rate limits
 		if resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			lastErr = MapHTTPStatusToError(resp.StatusCode, resp.Status)
 			continue
 		}
@@ -157,7 +157,7 @@ func (c *Client) doAuthenticatedRequest(ctx context.Context, endpoint string, to
 
 	// Retry once on 401 with fresh token
 	if resp.StatusCode == http.StatusUnauthorized && !tokenRetry {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err := c.authManager.ForceUpdate(ctx); err != nil {
 			return nil, NewInternalError("failed to refresh token", err)
 		}
@@ -165,7 +165,7 @@ func (c *Client) doAuthenticatedRequest(ctx context.Context, endpoint string, to
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, MapHTTPStatusToError(resp.StatusCode, resp.Status)
 	}
 
@@ -177,7 +177,7 @@ func (c *Client) apiRequest(ctx context.Context, endpoint string, result any) er
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return NewInternalError("failed to decode response", err)
@@ -190,7 +190,13 @@ func (c *Client) apiRequestRaw(ctx context.Context, endpoint string) ([]byte, er
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return io.ReadAll(resp.Body)
+}
+
+// DebugRawRequest makes an authenticated request and returns the raw response.
+// This is for debugging API responses.
+func (c *Client) DebugRawRequest(ctx context.Context, endpoint string) ([]byte, error) {
+	return c.apiRequestRaw(ctx, endpoint)
 }

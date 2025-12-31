@@ -29,11 +29,14 @@
 //
 //	func main() {
 //		// Create a new NEPSE client with default options
-//		client, err := nepse.NewClient(nil)
+//		opts := nepse.DefaultOptions()
+//		opts.TLSVerification = false // Required due to NEPSE server TLS issues
+//
+//		client, err := nepse.NewClient(opts)
 //		if err != nil {
 //			log.Fatalf("Failed to create NEPSE client: %v", err)
 //		}
-//		defer client.Close(context.Background())
+//		defer client.Close()
 //
 //		ctx := context.Background()
 //
@@ -54,14 +57,14 @@
 //		if err != nil {
 //			log.Fatalf("Failed to get company details: %v", err)
 //		}
-//		fmt.Printf("Company: %s, Sector: %s\n", details.SecurityName, details.SectorName)
+//		fmt.Printf("Company: %s, LTP: Rs. %.2f\n", details.SecurityName, details.LastTradedPrice)
 //	}
 package nepse
 
 // Version information
 const (
 	// Version is the current version of the nepse package.
-	Version = "1.0.0"
+	Version = "0.1.1"
 
 	// UserAgent is the default user agent string used by the client.
 	UserAgent = "go-nepse/" + Version

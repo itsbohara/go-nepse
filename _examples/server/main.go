@@ -14,12 +14,12 @@ import (
 )
 
 type app struct {
-	client nepse.Client
+	client *nepse.Client
 }
 
 func main() {
 	host := getenv("HOST", "127.0.0.1")
-	port := getenv("PORT", "8081")
+	port := getenv("PORT", "8080")
 	tlsVerify := getenv("TLS_VERIFY", "false") != "false"
 
 	opts := nepse.DefaultOptions()

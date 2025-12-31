@@ -125,22 +125,16 @@ type TodayPrice struct {
 	MinPrice            float64 `json:"minPrice"`
 }
 
-// PriceHistory represents historical price data for a security.
+// PriceHistory represents historical OHLCV data for a security.
 type PriceHistory struct {
 	BusinessDate        string  `json:"businessDate"`
-	SecurityID          int32   `json:"securityId"`
-	Symbol              string  `json:"symbol"`
-	SecurityName        string  `json:"securityName"`
-	OpenPrice           float64 `json:"openPrice"`
+	OpenPrice           float64 `json:"openPrice,omitempty"`
 	HighPrice           float64 `json:"highPrice"`
 	LowPrice            float64 `json:"lowPrice"`
-	ClosePrice          float64 `json:"closingPrice"`
+	ClosePrice          float64 `json:"closePrice"`
 	TotalTradedQuantity int64   `json:"totalTradedQuantity"`
 	TotalTradedValue    float64 `json:"totalTradedValue"`
 	TotalTrades         int32   `json:"totalTrades"`
-	PreviousClose       float64 `json:"previousClose"`
-	DifferenceRs        float64 `json:"differenceRs"`
-	PercentageChange    float64 `json:"percentageChange"`
 }
 
 // FloorSheetEntry represents a single floor sheet entry.
@@ -177,18 +171,29 @@ type FloorSheetResponse struct {
 
 // DepthEntry represents a single entry in market depth.
 type DepthEntry struct {
-	Price    float64 `json:"price"`
+	StockID  int32   `json:"stockId"`
+	Price    float64 `json:"orderBookOrderPrice"`
 	Quantity int64   `json:"quantity"`
-	Orders   int32   `json:"orders"`
+	Orders   int32   `json:"orderCount"`
+	IsBuy    int     `json:"isBuy"`
 }
 
-// MarketDepth represents market depth information for a security.
+// MarketDepthRaw represents the raw API response for market depth.
+type MarketDepthRaw struct {
+	TotalBuyQty  int64 `json:"totalBuyQty"`
+	TotalSellQty int64 `json:"totalSellQty"`
+	MarketDepth  struct {
+		BuyList  []DepthEntry `json:"buyMarketDepthList"`
+		SellList []DepthEntry `json:"sellMarketDepthList"`
+	} `json:"marketDepth"`
+}
+
+// MarketDepth represents processed market depth information.
 type MarketDepth struct {
-	SecurityID   int32        `json:"securityId"`
-	Symbol       string       `json:"symbol"`
-	SecurityName string       `json:"securityName"`
-	BuyDepth     []DepthEntry `json:"buyDepth"`
-	SellDepth    []DepthEntry `json:"sellDepth"`
+	TotalBuyQty  int64
+	TotalSellQty int64
+	BuyDepth     []DepthEntry
+	SellDepth    []DepthEntry
 }
 
 // TopListEntry represents entries in top gainers/losers/trades lists.
@@ -205,17 +210,6 @@ type TopListEntry struct {
 	LowPrice            float64 `json:"lowPrice,omitempty"`
 	OpenPrice           float64 `json:"openPrice,omitempty"`
 	PreviousClose       float64 `json:"previousClose,omitempty"`
-}
-
-// SupplyDemandEntry represents supply and demand data.
-type SupplyDemandEntry struct {
-	Symbol            string  `json:"symbol"`
-	SecurityName      string  `json:"securityName"`
-	SupplyQuantity    int64   `json:"supplyQuantity"`
-	SupplyAmount      float64 `json:"supplyAmount"`
-	DemandQuantity    int64   `json:"demandQuantity"`
-	DemandAmount      float64 `json:"demandAmount"`
-	DemandSupplyRatio float64 `json:"demandSupplyRatio"`
 }
 
 // GraphDataPoint represents a single data point in graph data.
