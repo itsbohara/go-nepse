@@ -121,8 +121,6 @@ func main() {
 | `DailyNepseIndexGraph()` | Main NEPSE index chart |
 | `DailyScripGraph(id)` | Intraday chart for a security |
 
-> **Note**: Graph endpoints currently return empty data. Use `PriceHistory` for charting.
-
 ## Configuration
 
 ```go

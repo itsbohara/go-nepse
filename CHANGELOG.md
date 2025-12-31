@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration tests
 - Rate limiting improvements
 
+## [0.1.2] - 2026-01-01
+
+### Added
+- **Graph Endpoints**: Implemented dynamic POST payload ID generation for graph endpoints, making them fully functional.
+- **Data Unmarshaling**: Added robust graph data point unmarshaling.
+- **Authentication**: Enhanced HTTP transport with robust authentication token management and retry mechanisms.
+
+### Changed
+- **BREAKING**: Refactored client method names to remove the `Get` prefix for more idiomatic Go (e.g., `MarketSummary()` instead of `GetMarketSummary()`).
+- Updated `README.md` to remove the known issue regarding graph endpoints.
+- Improved documentation for `TodaysPrices`, `FloorSheetOf`, and `FloorSheetBySymbol` regarding endpoint behavior and alternatives.
+
+### Fixed
+- Robustness improvements in token management and error handling during network issues.
+
 ## [0.1.1] - 2025-12-31
 
 ### Fixed

@@ -59,7 +59,7 @@ package nepse
 // Version information
 const (
 	// Version is the current version of the nepse package.
-	Version = "0.1.1"
+	Version = "0.1.2"
 
 	// UserAgent is the default user agent string used by the client.
 	UserAgent = "go-nepse/" + Version
