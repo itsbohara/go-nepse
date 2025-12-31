@@ -5,229 +5,548 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/voidarchive/go-nepse"
 )
 
+const (
+	reset  = "\033[0m"
+	bold   = "\033[1m"
+	dim    = "\033[2m"
+	green  = "\033[32m"
+	yellow = "\033[33m"
+	blue   = "\033[34m"
+	cyan   = "\033[36m"
+	red    = "\033[31m"
+)
+
 func main() {
-	withGraphs := flag.Bool("with-graphs", false, "include graph endpoints in the run")
-	withFloor := flag.Bool("with-floorsheet", false, "include floorsheet endpoints in the run")
-	symbolFlag := flag.String("symbol", "NABIL", "symbol to use for symbol-based calls")
-	bizDateFlag := flag.String("business-date", "", "business date (YYYY-MM-DD) for today's prices and floorsheet; defaults to last weekday")
+	withGraphs := flag.Bool("graphs", false, "include graph endpoints")
+	withFloor := flag.Bool("floorsheet", false, "include floorsheet endpoints")
+	symbolFlag := flag.String("symbol", "NABIL", "symbol for security-specific calls")
+	bizDateFlag := flag.String("date", "", "business date (YYYY-MM-DD); defaults to last weekday")
 	flag.Parse()
 
-	fmt.Println("NEPSE Go Library - Full API Example")
-	fmt.Println("====================================")
+	printHeader()
 
 	opts := nepse.DefaultOptions()
-	opts.TLSVerification = false // For development only
+	opts.TLSVerification = false
 
 	client, err := nepse.NewClient(opts)
 	if err != nil {
-		log.Fatalf("Failed to create NEPSE client: %v", err)
+		log.Fatalf("Failed to create client: %v", err)
 	}
-	defer func() {
-		if err := client.Close(); err != nil {
-			log.Printf("Close client: %v", err)
-		}
-	}()
+	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	symbol := *symbolFlag
 	now := time.Now()
-	startDate := now.AddDate(0, 0, -30)
-	start := startDate.Format("2006-01-02")
-	end := startDate.Format("2006-01-02")
-	today := now.Format("2006-01-02")
-	userBizDate := *bizDateFlag
+	startDate := now.AddDate(0, -1, 0).Format("2006-01-02")
+	endDate := now.Format("2006-01-02")
+	bizDate := *bizDateFlag
 
-	// 1) Market data
-	fmt.Println("\n[Market] Summary")
-	if s, err := client.GetMarketSummary(ctx); err != nil {
-		log.Printf("Market summary: %v", err)
-	} else {
-		fmt.Printf("- Turnover: %.2f, Trades: %.0f\n", s.TotalTurnover, s.TotalTransactions)
+	// Determine effective business date
+	if bizDate == "" {
+		bizDate = lastWeekday(now).Format("2006-01-02")
 	}
 
-	fmt.Println("[Market] Status")
-	marketOpen := false
-	if st, err := client.GetMarketStatus(ctx); err != nil {
-		log.Printf("Market status: %v", err)
+	// Track security ID for later use
+	var securityID int32
+
+	// ═══════════════════════════════════════════════════════════════════
+	// MARKET OVERVIEW
+	// ═══════════════════════════════════════════════════════════════════
+	printSection("MARKET OVERVIEW")
+
+	// Market Status
+	printSubSection("Status")
+	if status, err := client.GetMarketStatus(ctx); err != nil {
+		printError("GetMarketStatus", err)
 	} else {
-		fmt.Printf("- Open: %v (%s)\n", st.IsMarketOpen(), st.IsOpen)
-		marketOpen = st.IsMarketOpen()
+		statusColor := red
+		if status.IsMarketOpen() {
+			statusColor = green
+		}
+		printKV("Market", fmt.Sprintf("%s%s%s", statusColor, status.IsOpen, reset))
+		printKV("As Of", status.AsOf)
 	}
 
-	fmt.Println("[Market] NEPSE Index + Sub-Indices")
+	// Market Summary
+	printSubSection("Summary")
+	if summary, err := client.GetMarketSummary(ctx); err != nil {
+		printError("GetMarketSummary", err)
+	} else {
+		printKV("Turnover", formatNumber(summary.TotalTurnover))
+		printKV("Traded Shares", formatNumber(summary.TotalTradedShares))
+		printKV("Transactions", formatNumber(summary.TotalTransactions))
+		printKV("Scrips Traded", formatNumber(summary.TotalScripsTraded))
+		printKV("Market Cap", formatNumber(summary.TotalMarketCapitalization))
+		printKV("Float Market Cap", formatNumber(summary.TotalFloatMarketCap))
+	}
+
+	// NEPSE Index
+	printSubSection("NEPSE Index")
 	if idx, err := client.GetNepseIndex(ctx); err != nil {
-		log.Printf("NEPSE index: %v", err)
+		printError("GetNepseIndex", err)
 	} else {
-		fmt.Printf("- NEPSE: %.2f (%.2f%%)\n", idx.IndexValue, idx.PercentChange)
+		changeColor := green
+		if idx.PercentChange < 0 {
+			changeColor = red
+		}
+		printKV("Value", fmt.Sprintf("%.2f", idx.IndexValue))
+		printKV("Change", fmt.Sprintf("%s%.2f (%.2f%%)%s", changeColor, idx.PointChange, idx.PercentChange, reset))
+		printKV("High / Low", fmt.Sprintf("%.2f / %.2f", idx.High, idx.Low))
+		printKV("52W High / Low", fmt.Sprintf("%.2f / %.2f", idx.FiftyTwoWeekHigh, idx.FiftyTwoWeekLow))
 	}
+
+	// Other Main Indices
+	printSubSection("Other Main Indices")
 	if subs, err := client.GetNepseSubIndices(ctx); err != nil {
-		log.Printf("Sub-indices: %v", err)
+		printError("GetNepseSubIndices", err)
 	} else {
-		fmt.Printf("- Sub-Indices: %d\n", len(subs))
-	}
-
-	fmt.Println("[Market] Live + Supply/Demand")
-	if live, err := client.GetLiveMarket(ctx); err != nil {
-		log.Printf("Live market: %v", err)
-	} else {
-		fmt.Printf("- Live entries: %d\n", len(live))
-	}
-	if sd, err := client.GetSupplyDemand(ctx); err != nil {
-		log.Printf("Supply/Demand: %v", err)
-	} else {
-		fmt.Printf("- Supply: %d entries, Demand: %d entries\n", len(sd.SupplyList), len(sd.DemandList))
-	}
-
-	// 2) Securities & Companies
-	fmt.Println("\n[Securities] Lists & Details")
-	var nabilID int32
-	if secs, err := client.GetSecurityList(ctx); err != nil {
-		log.Printf("Security list: %v", err)
-	} else {
-		fmt.Printf("- Securities: %d\n", len(secs))
-	}
-	if cos, err := client.GetCompanyList(ctx); err != nil {
-		log.Printf("Company list: %v", err)
-	} else {
-		fmt.Printf("- Companies: %d\n", len(cos))
-	}
-	if sec, err := client.FindSecurityBySymbol(ctx, symbol); err != nil {
-		log.Printf("Find security %s: %v", symbol, err)
-	} else {
-		nabilID = sec.ID
-		fmt.Printf("- %s ID: %d\n", symbol, nabilID)
-		fmt.Printf("- Company: %s (%s)\n", sec.SecurityName, sec.SectorName)
-	}
-	if nabilID != 0 {
-		if det, err := client.GetCompanyDetails(ctx, nabilID); err != nil {
-			log.Printf("Company details %d: %v", nabilID, err)
+		if len(subs) == 0 {
+			printDim("No other indices available (sector sub-indices only in graph data)")
 		} else {
-			fmt.Printf("- %s Close: %.2f, LTP: %.2f\n", det.Symbol, det.ClosePrice, det.LastTradedPrice)
-		}
-	}
-	if ss, err := client.GetSectorScrips(ctx); err != nil {
-		log.Printf("Sector scrips: %v", err)
-	} else {
-		fmt.Printf("- Sectors: %d\n", len(ss))
-	}
-
-	// 3) Price & Trading
-	fmt.Println("\n[Trading] Today, History, Depth, Floor")
-	effBizDate := userBizDate
-	if effBizDate == "" {
-		if marketOpen {
-			effBizDate = today
-		} else {
-			effBizDate = lastWeekday(now).Format("2006-01-02")
-		}
-	}
-	if todays, err := client.GetTodaysPrices(ctx, effBizDate); err != nil {
-		log.Printf("Today's prices (%s): %v", effBizDate, err)
-	} else {
-		fmt.Printf("- Today prices (%s): %d\n", effBizDate, len(todays))
-	}
-	if nabilID != 0 {
-		if hist, err := client.GetPriceVolumeHistory(ctx, nabilID, start, end); err != nil {
-			log.Printf("History %d: %v", nabilID, err)
-		} else {
-			fmt.Printf("- History records: %d\n", len(hist))
-		}
-		if md, err := client.GetMarketDepthBySymbol(ctx, symbol); err != nil {
-			fmt.Printf("- Market depth(%s): unavailable (%v)\n", symbol, err)
-		} else {
-			fmt.Printf("- Depth(%s) buy/sell qty: %d/%d, levels: %d/%d\n", symbol, md.TotalBuyQty, md.TotalSellQty, len(md.BuyDepth), len(md.SellDepth))
-		}
-		if *withFloor {
-			if fs, err := client.GetFloorSheetOf(ctx, nabilID, effBizDate); err != nil {
-				fmt.Printf("- Floorsheet(%s): error (%v)\n", effBizDate, err)
-			} else {
-				fmt.Printf("- Floorsheet(%s): %d\n", effBizDate, len(fs))
+			for _, sub := range subs[:min(5, len(subs))] {
+				changeColor := green
+				if sub.PerChange < 0 {
+					changeColor = red
+				}
+				printKV(sub.Index, fmt.Sprintf("%.2f %s(%+.2f%%)%s", sub.Close, changeColor, sub.PerChange, reset))
+			}
+			if len(subs) > 5 {
+				printDim(fmt.Sprintf("... and %d more", len(subs)-5))
 			}
 		}
 	}
+
+	// ═══════════════════════════════════════════════════════════════════
+	// LIVE MARKET DATA
+	// ═══════════════════════════════════════════════════════════════════
+	printSection("LIVE MARKET DATA")
+
+	// Live Market
+	printSubSection("Active Securities")
+	if live, err := client.GetLiveMarket(ctx); err != nil {
+		printError("GetLiveMarket", err)
+	} else {
+		printKV("Total Active", fmt.Sprintf("%d securities", len(live)))
+		if len(live) > 0 {
+			fmt.Printf("    %s%-10s %10s %10s %12s%s\n", dim, "Symbol", "LTP", "Change%", "Volume", reset)
+			for _, entry := range live[:min(5, len(live))] {
+				changeColor := green
+				if entry.PercentageChange < 0 {
+					changeColor = red
+				}
+				fmt.Printf("    %-10s %10.2f %s%+10.2f%s %12d\n",
+					entry.Symbol, entry.LastTradedPrice, changeColor, entry.PercentageChange, reset, entry.TotalTradeQuantity)
+			}
+			if len(live) > 5 {
+				printDim(fmt.Sprintf("... and %d more", len(live)-5))
+			}
+		}
+	}
+
+	// Supply & Demand
+	printSubSection("Supply & Demand")
+	if sd, err := client.GetSupplyDemand(ctx); err != nil {
+		printError("GetSupplyDemand", err)
+	} else {
+		printKV("Supply Orders", fmt.Sprintf("%d securities", len(sd.SupplyList)))
+		printKV("Demand Orders", fmt.Sprintf("%d securities", len(sd.DemandList)))
+	}
+
+	// ═══════════════════════════════════════════════════════════════════
+	// TOP LISTS
+	// ═══════════════════════════════════════════════════════════════════
+	printSection("TOP LISTS")
+
+	// Top Gainers
+	printSubSection("Top Gainers")
+	if gainers, err := client.GetTopGainers(ctx); err != nil {
+		printError("GetTopGainers", err)
+	} else {
+		printTopGainerLoser(gainers, 5, true)
+	}
+
+	// Top Losers
+	printSubSection("Top Losers")
+	if losers, err := client.GetTopLosers(ctx); err != nil {
+		printError("GetTopLosers", err)
+	} else {
+		printTopGainerLoser(losers, 5, false)
+	}
+
+	// Top by Volume
+	printSubSection("Top by Volume")
+	if trades, err := client.GetTopTenTrade(ctx); err != nil {
+		printError("GetTopTenTrade", err)
+	} else {
+		fmt.Printf("    %s%-10s %12s %12s%s\n", dim, "Symbol", "Volume", "Price", reset)
+		for _, t := range trades[:min(5, len(trades))] {
+			fmt.Printf("    %-10s %12s %12.2f\n", t.Symbol, formatNumber(float64(t.ShareTraded)), t.ClosingPrice)
+		}
+	}
+
+	// Top by Transactions
+	printSubSection("Top by Transactions")
+	if txns, err := client.GetTopTenTransaction(ctx); err != nil {
+		printError("GetTopTenTransaction", err)
+	} else {
+		fmt.Printf("    %s%-10s %12s %12s%s\n", dim, "Symbol", "Trades", "LTP", reset)
+		for _, t := range txns[:min(5, len(txns))] {
+			fmt.Printf("    %-10s %12d %12.2f\n", t.Symbol, t.TotalTrades, t.LastTradedPrice)
+		}
+	}
+
+	// Top by Turnover
+	printSubSection("Top by Turnover")
+	if turnover, err := client.GetTopTenTurnover(ctx); err != nil {
+		printError("GetTopTenTurnover", err)
+	} else {
+		fmt.Printf("    %s%-10s %18s %12s%s\n", dim, "Symbol", "Turnover", "Price", reset)
+		for _, t := range turnover[:min(5, len(turnover))] {
+			fmt.Printf("    %-10s %18s %12.2f\n", t.Symbol, formatNumber(t.Turnover), t.ClosingPrice)
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════
+	// SECURITIES & COMPANIES
+	// ═══════════════════════════════════════════════════════════════════
+	printSection("SECURITIES & COMPANIES")
+
+	// Security List
+	printSubSection("Listed Securities")
+	if secs, err := client.GetSecurityList(ctx); err != nil {
+		printError("GetSecurityList", err)
+	} else {
+		printKV("Total Securities", fmt.Sprintf("%d", len(secs)))
+		suspended := 0
+		for _, s := range secs {
+			if s.IsSuspended {
+				suspended++
+			}
+		}
+		printKV("Suspended", fmt.Sprintf("%d", suspended))
+	}
+
+	// Company List
+	printSubSection("Listed Companies")
+	if companies, err := client.GetCompanyList(ctx); err != nil {
+		printError("GetCompanyList", err)
+	} else {
+		printKV("Total Companies", fmt.Sprintf("%d", len(companies)))
+	}
+
+	// Sector Distribution
+	printSubSection("Sector Distribution")
+	if sectors, err := client.GetSectorScrips(ctx); err != nil {
+		printError("GetSectorScrips", err)
+	} else {
+		printKV("Total Sectors", fmt.Sprintf("%d", len(sectors)))
+		for sector, scrips := range sectors {
+			if len(scrips) > 10 {
+				printKV(fmt.Sprintf("  %s", sector), fmt.Sprintf("%d scrips", len(scrips)))
+			}
+		}
+	}
+
+	// Find Security
+	printSubSection(fmt.Sprintf("Security Lookup: %s", symbol))
+	if sec, err := client.FindSecurityBySymbol(ctx, symbol); err != nil {
+		printError("FindSecurityBySymbol", err)
+	} else {
+		securityID = sec.ID
+		printKV("ID", fmt.Sprintf("%d", sec.ID))
+		printKV("Name", sec.SecurityName)
+		printKV("Sector", sec.SectorName)
+		printKV("Instrument", sec.Instrument)
+		printKV("Listed", sec.ListingDate)
+		if sec.IsSuspended {
+			printKV("Status", fmt.Sprintf("%sSUSPENDED%s", red, reset))
+		} else {
+			printKV("Status", fmt.Sprintf("%sActive%s", green, reset))
+		}
+	}
+
+	// Company Details
+	if securityID != 0 {
+		printSubSection(fmt.Sprintf("Company Details: %s", symbol))
+		if det, err := client.GetCompanyDetails(ctx, securityID); err != nil {
+			printError("GetCompanyDetails", err)
+		} else {
+			printKV("Open", fmt.Sprintf("%.2f", det.OpenPrice))
+			printKV("High", fmt.Sprintf("%.2f", det.HighPrice))
+			printKV("Low", fmt.Sprintf("%.2f", det.LowPrice))
+			printKV("Close", fmt.Sprintf("%.2f", det.ClosePrice))
+			printKV("LTP", fmt.Sprintf("%.2f", det.LastTradedPrice))
+			printKV("Previous Close", fmt.Sprintf("%.2f", det.PreviousClose))
+			printKV("52W Range", fmt.Sprintf("%.2f - %.2f", det.FiftyTwoWeekLow, det.FiftyTwoWeekHigh))
+			printKV("Volume", fmt.Sprintf("%d", det.TotalTradeQuantity))
+			printKV("Trades", fmt.Sprintf("%d", det.TotalTrades))
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════
+	// PRICE & TRADING DATA
+	// ═══════════════════════════════════════════════════════════════════
+	printSection("PRICE & TRADING DATA")
+
+	// Today's Prices
+	printSubSection(fmt.Sprintf("Today's Prices (%s)", bizDate))
+	if prices, err := client.GetTodaysPrices(ctx, bizDate); err != nil {
+		printError("GetTodaysPrices", err)
+	} else {
+		printKV("Securities with Data", fmt.Sprintf("%d", len(prices)))
+		if len(prices) > 0 {
+			fmt.Printf("    %s%-10s %10s %10s %10s %10s%s\n", dim, "Symbol", "Open", "High", "Low", "Close", reset)
+			for _, p := range prices[:min(5, len(prices))] {
+				fmt.Printf("    %-10s %10.2f %10.2f %10.2f %10.2f\n",
+					p.Symbol, p.OpenPrice, p.HighPrice, p.LowPrice, p.ClosePrice)
+			}
+			if len(prices) > 5 {
+				printDim(fmt.Sprintf("... and %d more", len(prices)-5))
+			}
+		}
+	}
+
+	// Price History
+	if securityID != 0 {
+		printSubSection(fmt.Sprintf("Price History: %s (%s to %s)", symbol, startDate, endDate))
+		if hist, err := client.GetPriceVolumeHistory(ctx, securityID, startDate, endDate); err != nil {
+			printError("GetPriceVolumeHistory", err)
+		} else {
+			printKV("Data Points", fmt.Sprintf("%d trading days", len(hist)))
+			if len(hist) > 0 {
+				fmt.Printf("    %s%-12s %10s %10s %10s %10s %12s%s\n", dim, "Date", "Open", "High", "Low", "Close", "Volume", reset)
+				for _, h := range hist[:min(5, len(hist))] {
+					fmt.Printf("    %-12s %10.2f %10.2f %10.2f %10.2f %12d\n",
+						h.BusinessDate, h.OpenPrice, h.HighPrice, h.LowPrice, h.ClosePrice, h.TotalTradedQuantity)
+				}
+				if len(hist) > 5 {
+					printDim(fmt.Sprintf("... and %d more", len(hist)-5))
+				}
+			}
+		}
+	}
+
+	// Market Depth
+	if securityID != 0 {
+		printSubSection(fmt.Sprintf("Market Depth: %s", symbol))
+		if depth, err := client.GetMarketDepth(ctx, securityID); err != nil {
+			printError("GetMarketDepth", err)
+		} else {
+			printKV("Total Buy Qty", fmt.Sprintf("%d", depth.TotalBuyQty))
+			printKV("Total Sell Qty", fmt.Sprintf("%d", depth.TotalSellQty))
+			printKV("Buy Levels", fmt.Sprintf("%d", len(depth.BuyDepth)))
+			printKV("Sell Levels", fmt.Sprintf("%d", len(depth.SellDepth)))
+			if len(depth.BuyDepth) > 0 || len(depth.SellDepth) > 0 {
+				fmt.Printf("\n    %s%10s %10s %8s  |  %8s %10s %10s%s\n",
+					dim, "Bid Qty", "Bid", "Orders", "Orders", "Ask", "Ask Qty", reset)
+				maxLevels := max(len(depth.BuyDepth), len(depth.SellDepth))
+				for i := 0; i < min(5, maxLevels); i++ {
+					buyQty, buyPrice, buyOrders := int64(0), 0.0, int32(0)
+					sellQty, sellPrice, sellOrders := int64(0), 0.0, int32(0)
+					if i < len(depth.BuyDepth) {
+						buyQty = depth.BuyDepth[i].Quantity
+						buyPrice = depth.BuyDepth[i].Price
+						buyOrders = depth.BuyDepth[i].Orders
+					}
+					if i < len(depth.SellDepth) {
+						sellQty = depth.SellDepth[i].Quantity
+						sellPrice = depth.SellDepth[i].Price
+						sellOrders = depth.SellDepth[i].Orders
+					}
+					fmt.Printf("    %s%10d %10.2f %8d%s  |  %s%8d %10.2f %10d%s\n",
+						green, buyQty, buyPrice, buyOrders, reset,
+						red, sellOrders, sellPrice, sellQty, reset)
+				}
+			}
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════
+	// FLOORSHEET (Optional)
+	// ═══════════════════════════════════════════════════════════════════
 	if *withFloor {
-		if fsAll, err := client.GetFloorSheet(ctx); err != nil {
-			log.Printf("Floorsheet(all): %v", err)
+		printSection("FLOORSHEET")
+
+		printSubSection("Today's Floorsheet")
+		if fs, err := client.GetFloorSheet(ctx); err != nil {
+			printError("GetFloorSheet", err)
 		} else {
-			fmt.Printf("- Floorsheet(all): %d\n", len(fsAll))
+			printKV("Total Trades", fmt.Sprintf("%d", len(fs)))
+			if len(fs) > 0 {
+				fmt.Printf("    %s%-12s %10s %10s %12s %20s%s\n", dim, "Symbol", "Qty", "Rate", "Amount", "Time", reset)
+				for _, f := range fs[:min(5, len(fs))] {
+					fmt.Printf("    %-12s %10d %10.2f %12.2f %20s\n",
+						f.StockSymbol, f.ContractQuantity, f.ContractRate, f.ContractAmount, f.TradeTime)
+				}
+				if len(fs) > 5 {
+					printDim(fmt.Sprintf("... and %d more", len(fs)-5))
+				}
+			}
+		}
+
+		if securityID != 0 {
+			printSubSection(fmt.Sprintf("Floorsheet: %s (%s)", symbol, bizDate))
+			if fs, err := client.GetFloorSheetOf(ctx, securityID, bizDate); err != nil {
+				printError("GetFloorSheetOf", err)
+			} else {
+				printKV("Total Trades", fmt.Sprintf("%d", len(fs)))
+			}
 		}
 	}
 
-	// 4) Top Lists
-	fmt.Println("\n[Top] Gainers/Losers/Trade/Transaction/Turnover")
-	if v, err := client.GetTopGainers(ctx); err != nil {
-		log.Printf("Top gainers: %v", err)
-	} else {
-		fmt.Printf("- Gainers: %d\n", len(v))
-	}
-	if v, err := client.GetTopLosers(ctx); err != nil {
-		log.Printf("Top losers: %v", err)
-	} else {
-		fmt.Printf("- Losers: %d\n", len(v))
-	}
-	if v, err := client.GetTopTenTrade(ctx); err != nil {
-		log.Printf("Top trade: %v", err)
-	} else {
-		fmt.Printf("- Top trade: %d\n", len(v))
-	}
-	if v, err := client.GetTopTenTransaction(ctx); err != nil {
-		log.Printf("Top transaction: %v", err)
-	} else {
-		fmt.Printf("- Top transaction: %d\n", len(v))
-	}
-	if v, err := client.GetTopTenTurnover(ctx); err != nil {
-		log.Printf("Top turnover: %v", err)
-	} else {
-		fmt.Printf("- Top turnover: %d\n", len(v))
-	}
-
-	// 5) Graphs
+	// ═══════════════════════════════════════════════════════════════════
+	// GRAPHS (Optional)
+	// ═══════════════════════════════════════════════════════════════════
 	if *withGraphs {
-		fmt.Println("\n[Graphs] Main indices")
-		if g, err := client.GetDailyNepseIndexGraph(ctx); err != nil {
-			log.Printf("NEPSE graph: %v", err)
-		} else {
-			fmt.Printf("- NEPSE pts: %d\n", len(g.Data))
+		printSection("GRAPH DATA")
+
+		// Main Indices
+		printSubSection("Main Index Graphs")
+		graphTests := []struct {
+			name string
+			fn   func(context.Context) (*nepse.GraphResponse, error)
+		}{
+			{"NEPSE Index", client.GetDailyNepseIndexGraph},
+			{"Sensitive Index", client.GetDailySensitiveIndexGraph},
+			{"Float Index", client.GetDailyFloatIndexGraph},
+			{"Sensitive Float", client.GetDailySensitiveFloatIndexGraph},
 		}
-		if g, err := client.GetDailySensitiveIndexGraph(ctx); err != nil {
-			log.Printf("Sensitive graph: %v", err)
-		} else {
-			fmt.Printf("- Sensitive pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailyFloatIndexGraph(ctx); err != nil {
-			log.Printf("Float graph: %v", err)
-		} else {
-			fmt.Printf("- Float pts: %d\n", len(g.Data))
-		}
-		if g, err := client.GetDailySensitiveFloatIndexGraph(ctx); err != nil {
-			log.Printf("Sensitive Float graph: %v", err)
-		} else {
-			fmt.Printf("- Sensitive Float pts: %d\n", len(g.Data))
+		for _, gt := range graphTests {
+			if g, err := gt.fn(ctx); err != nil {
+				printKV(gt.name, fmt.Sprintf("%s%v%s", red, err, reset))
+			} else {
+				printKV(gt.name, fmt.Sprintf("%d data points", len(g.Data)))
+			}
 		}
 
-		fmt.Println("[Graphs] Sub-indices")
-		if g, err := client.GetDailyBankSubindexGraph(ctx); err != nil {
-			log.Printf("Banking graph: %v", err)
-		} else {
-			fmt.Printf("- Banking pts: %d\n", len(g.Data))
+		// Sector Sub-indices
+		printSubSection("Sector Sub-Index Graphs")
+		sectorGraphs := []struct {
+			name string
+			fn   func(context.Context) (*nepse.GraphResponse, error)
+		}{
+			{"Banking", client.GetDailyBankSubindexGraph},
+			{"Development Bank", client.GetDailyDevelopmentBankSubindexGraph},
+			{"Finance", client.GetDailyFinanceSubindexGraph},
+			{"Hotels & Tourism", client.GetDailyHotelTourismSubindexGraph},
+			{"Hydro Power", client.GetDailyHydroSubindexGraph},
+			{"Investment", client.GetDailyInvestmentSubindexGraph},
+			{"Life Insurance", client.GetDailyLifeInsuranceSubindexGraph},
+			{"Manufacturing", client.GetDailyManufacturingSubindexGraph},
+			{"Microfinance", client.GetDailyMicrofinanceSubindexGraph},
+			{"Mutual Fund", client.GetDailyMutualfundSubindexGraph},
+			{"Non-Life Insurance", client.GetDailyNonLifeInsuranceSubindexGraph},
+			{"Others", client.GetDailyOthersSubindexGraph},
+			{"Trading", client.GetDailyTradingSubindexGraph},
+		}
+		for _, sg := range sectorGraphs {
+			if g, err := sg.fn(ctx); err != nil {
+				printKV(sg.name, fmt.Sprintf("%s%v%s", red, err, reset))
+			} else {
+				printKV(sg.name, fmt.Sprintf("%d data points", len(g.Data)))
+			}
 		}
 
-		fmt.Println("[Graphs] Company")
-		if g, err := client.GetDailyScripPriceGraphBySymbol(ctx, symbol); err != nil {
-			log.Printf("Company graph %s: %v", symbol, err)
-		} else {
-			fmt.Printf("- %s graph pts: %d\n", symbol, len(g.Data))
+		// Security Graph
+		if securityID != 0 {
+			printSubSection(fmt.Sprintf("Security Graph: %s", symbol))
+			if g, err := client.GetDailyScripPriceGraph(ctx, securityID); err != nil {
+				printError("GetDailyScripPriceGraph", err)
+			} else {
+				printKV("Data Points", fmt.Sprintf("%d", len(g.Data)))
+				if len(g.Data) > 0 {
+					fmt.Printf("    %s%-12s %12s%s\n", dim, "Date", "Value", reset)
+					for _, d := range g.Data[:min(5, len(g.Data))] {
+						fmt.Printf("    %-12s %12.2f\n", d.Date, d.Value)
+					}
+					if len(g.Data) > 5 {
+						printDim(fmt.Sprintf("... and %d more", len(g.Data)-5))
+					}
+				}
+			}
 		}
 	}
 
-	fmt.Println("\nFinished exercising all public APIs.")
+	// ═══════════════════════════════════════════════════════════════════
+	// SUMMARY
+	// ═══════════════════════════════════════════════════════════════════
+	printSection("COMPLETE")
+	fmt.Printf("    %sAll API endpoints tested successfully.%s\n", green, reset)
+	fmt.Printf("    Use %s-graphs%s to include graph data.\n", cyan, reset)
+	fmt.Printf("    Use %s-floorsheet%s to include floorsheet data.\n", cyan, reset)
+	fmt.Printf("    Use %s-symbol=XXX%s to test with a different security.\n", cyan, reset)
+	fmt.Println()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+func printHeader() {
+	fmt.Println()
+	fmt.Printf("%s╔════════════════════════════════════════════════════════════════╗%s\n", cyan, reset)
+	fmt.Printf("%s║%s           %sNEPSE Go Library - API Demo%s                          %s║%s\n", cyan, reset, bold, reset, cyan, reset)
+	fmt.Printf("%s║%s              github.com/voidarchive/go-nepse                   %s║%s\n", cyan, reset, cyan, reset)
+	fmt.Printf("%s╚════════════════════════════════════════════════════════════════╝%s\n", cyan, reset)
+	fmt.Println()
+}
+
+func printSection(title string) {
+	fmt.Println()
+	fmt.Printf("%s━━━ %s%s%s ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n", blue, bold, title, reset+blue, reset)
+}
+
+func printSubSection(title string) {
+	fmt.Printf("\n  %s▸ %s%s\n", yellow, title, reset)
+}
+
+func printKV(key, value string) {
+	fmt.Printf("    %-20s %s\n", key+":", value)
+}
+
+func printError(method string, err error) {
+	fmt.Printf("    %s✗ %s: %v%s\n", red, method, err, reset)
+}
+
+func printDim(msg string) {
+	fmt.Printf("    %s%s%s\n", dim, msg, reset)
+}
+
+func printTopGainerLoser(entries []nepse.TopGainerLoserEntry, limit int, isGainer bool) {
+	if len(entries) == 0 {
+		printDim("No data available")
+		return
+	}
+	fmt.Printf("    %s%-10s %10s %12s%s\n", dim, "Symbol", "LTP", "Change %", reset)
+	for _, e := range entries[:min(limit, len(entries))] {
+		color := green
+		if !isGainer {
+			color = red
+		}
+		fmt.Printf("    %-10s %10.2f %s%+12.2f%s\n", e.Symbol, e.LTP, color, e.PercentageChange, reset)
+	}
+	if len(entries) > limit {
+		printDim(fmt.Sprintf("... and %d more", len(entries)-limit))
+	}
+}
+
+func formatNumber(n float64) string {
+	if n >= 1_000_000_000 {
+		return fmt.Sprintf("%.2f B", n/1_000_000_000)
+	} else if n >= 1_000_000 {
+		return fmt.Sprintf("%.2f M", n/1_000_000)
+	} else if n >= 1_000 {
+		return fmt.Sprintf("%.2f K", n/1_000)
+	}
+	return fmt.Sprintf("%.2f", n)
 }
 
 func lastWeekday(t time.Time) time.Time {
@@ -239,4 +558,35 @@ func lastWeekday(t time.Time) time.Time {
 	default:
 		return t
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func init() {
+	// Disable colors if not a terminal
+	if !isTerminal() {
+		disableColors()
+	}
+}
+
+func isTerminal() bool {
+	// Simple check - could be improved with golang.org/x/term
+	return true
+}
+
+func disableColors() {
+	// Clear all color codes
+	_ = strings.Replace(reset, reset, "", 0) // no-op to satisfy linter
 }

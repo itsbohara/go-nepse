@@ -80,24 +80,19 @@ func (c *Client) GetNepseIndex(ctx context.Context) (*NepseIndex, error) {
 	return nil, NewNotFoundError("NEPSE Index")
 }
 
-// GetNepseSubIndices returns all sector sub-indices excluding the main composite indices.
+// GetNepseSubIndices returns other main indices (Sensitive, Float, Sensitive Float)
+// excluding the main NEPSE index.
+// Note: Sector sub-indices are only available through graph endpoints.
 func (c *Client) GetNepseSubIndices(ctx context.Context) ([]SubIndex, error) {
 	var rawIndices []NepseIndexRaw
 	if err := c.apiRequest(ctx, c.config.Endpoints.NepseIndex, &rawIndices); err != nil {
 		return nil, err
 	}
 
-	// Composite indices to exclude from sub-indices list.
-	excluded := map[int32]bool{
-		nepseIndexID:          true,
-		sensitiveIndexID:      true,
-		floatIndexID:          true,
-		sensitiveFloatIndexID: true,
-	}
-
+	// Only exclude the main NEPSE index, include the other 3 main indices
 	subIndices := make([]SubIndex, 0, len(rawIndices))
 	for i := range rawIndices {
-		if !excluded[rawIndices[i].ID] {
+		if rawIndices[i].ID != nepseIndexID {
 			subIndices = append(subIndices, SubIndex(rawIndices[i]))
 		}
 	}
@@ -139,8 +134,8 @@ func (c *Client) GetSupplyDemand(ctx context.Context) (*SupplyDemandData, error)
 }
 
 // GetTopGainers returns securities with the highest percentage gains for the trading day.
-func (c *Client) GetTopGainers(ctx context.Context) ([]TopListEntry, error) {
-	var topGainers []TopListEntry
+func (c *Client) GetTopGainers(ctx context.Context) ([]TopGainerLoserEntry, error) {
+	var topGainers []TopGainerLoserEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopGainers, &topGainers); err != nil {
 		return nil, err
 	}
@@ -148,8 +143,8 @@ func (c *Client) GetTopGainers(ctx context.Context) ([]TopListEntry, error) {
 }
 
 // GetTopLosers returns securities with the highest percentage losses for the trading day.
-func (c *Client) GetTopLosers(ctx context.Context) ([]TopListEntry, error) {
-	var topLosers []TopListEntry
+func (c *Client) GetTopLosers(ctx context.Context) ([]TopGainerLoserEntry, error) {
+	var topLosers []TopGainerLoserEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopLosers, &topLosers); err != nil {
 		return nil, err
 	}
@@ -157,8 +152,8 @@ func (c *Client) GetTopLosers(ctx context.Context) ([]TopListEntry, error) {
 }
 
 // GetTopTenTrade returns the ten securities with the highest traded share volume.
-func (c *Client) GetTopTenTrade(ctx context.Context) ([]TopListEntry, error) {
-	var topTrade []TopListEntry
+func (c *Client) GetTopTenTrade(ctx context.Context) ([]TopTradeEntry, error) {
+	var topTrade []TopTradeEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopTrade, &topTrade); err != nil {
 		return nil, err
 	}
@@ -166,8 +161,8 @@ func (c *Client) GetTopTenTrade(ctx context.Context) ([]TopListEntry, error) {
 }
 
 // GetTopTenTransaction returns the ten securities with the most transactions.
-func (c *Client) GetTopTenTransaction(ctx context.Context) ([]TopListEntry, error) {
-	var topTransaction []TopListEntry
+func (c *Client) GetTopTenTransaction(ctx context.Context) ([]TopTransactionEntry, error) {
+	var topTransaction []TopTransactionEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopTransaction, &topTransaction); err != nil {
 		return nil, err
 	}
@@ -175,8 +170,8 @@ func (c *Client) GetTopTenTransaction(ctx context.Context) ([]TopListEntry, erro
 }
 
 // GetTopTenTurnover returns the ten securities with the highest trading turnover (value).
-func (c *Client) GetTopTenTurnover(ctx context.Context) ([]TopListEntry, error) {
-	var topTurnover []TopListEntry
+func (c *Client) GetTopTenTurnover(ctx context.Context) ([]TopTurnoverEntry, error) {
+	var topTurnover []TopTurnoverEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopTurnover, &topTurnover); err != nil {
 		return nil, err
 	}

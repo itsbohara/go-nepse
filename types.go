@@ -196,7 +196,45 @@ type MarketDepth struct {
 	SellDepth    []DepthEntry
 }
 
-// TopListEntry represents entries in top gainers/losers/trades lists.
+// TopGainerLoserEntry represents entries in top gainers/losers lists.
+type TopGainerLoserEntry struct {
+	Symbol           string  `json:"symbol"`
+	SecurityName     string  `json:"securityName"`
+	SecurityID       int32   `json:"securityId"`
+	LTP              float64 `json:"ltp"`
+	PointChange      float64 `json:"pointChange"`
+	PercentageChange float64 `json:"percentageChange"`
+}
+
+// TopTradeEntry represents entries in top trade (volume) list.
+type TopTradeEntry struct {
+	Symbol       string  `json:"symbol"`
+	SecurityName string  `json:"securityName"`
+	SecurityID   int32   `json:"securityId"`
+	ShareTraded  int64   `json:"shareTraded"`
+	ClosingPrice float64 `json:"closingPrice"`
+}
+
+// TopTurnoverEntry represents entries in top turnover list.
+type TopTurnoverEntry struct {
+	Symbol       string  `json:"symbol"`
+	SecurityName string  `json:"securityName"`
+	SecurityID   int32   `json:"securityId"`
+	Turnover     float64 `json:"turnover"`
+	ClosingPrice float64 `json:"closingPrice"`
+}
+
+// TopTransactionEntry represents entries in top transaction list.
+type TopTransactionEntry struct {
+	Symbol          string  `json:"symbol"`
+	SecurityName    string  `json:"securityName"`
+	SecurityID      int32   `json:"securityId"`
+	TotalTrades     int32   `json:"totalTrades"`
+	LastTradedPrice float64 `json:"lastTradedPrice"`
+}
+
+// TopListEntry is deprecated, use specific types instead.
+// Kept for backward compatibility.
 type TopListEntry struct {
 	Symbol              string  `json:"symbol"`
 	SecurityName        string  `json:"securityName"`
@@ -277,16 +315,20 @@ type CompanyDetails struct {
 
 // LiveMarketEntry represents live market data entry.
 type LiveMarketEntry struct {
-	Symbol           string  `json:"symbol"`
-	SecurityName     string  `json:"securityName"`
-	OpenPrice        float64 `json:"openPrice"`
-	HighPrice        float64 `json:"highPrice"`
-	LowPrice         float64 `json:"lowPrice"`
-	ClosePrice       float64 `json:"closePrice"`
-	PercentChange    float64 `json:"percentChange"`
-	Volume           int64   `json:"volume"`
-	PreviousClose    float64 `json:"previousClose"`
-	LastTradedVolume int64   `json:"lastTradedVolume"`
+	SecurityID          string  `json:"securityId"`
+	Symbol              string  `json:"symbol"`
+	SecurityName        string  `json:"securityName"`
+	OpenPrice           float64 `json:"openPrice"`
+	HighPrice           float64 `json:"highPrice"`
+	LowPrice            float64 `json:"lowPrice"`
+	LastTradedPrice     float64 `json:"lastTradedPrice"`
+	TotalTradeQuantity  int64   `json:"totalTradeQuantity"`
+	TotalTradeValue     float64 `json:"totalTradeValue"`
+	PreviousClose       float64 `json:"previousClose"`
+	PercentageChange    float64 `json:"percentageChange"`
+	LastTradedVolume    int64   `json:"lastTradedVolume"`
+	LastUpdatedDateTime string  `json:"lastUpdatedDateTime"`
+	AverageTradedPrice  float64 `json:"averageTradedPrice"`
 }
 
 // SectorScrips represents scrips grouped by sector.
