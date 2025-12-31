@@ -47,13 +47,8 @@
 //		}
 //		fmt.Printf("Total Turnover: Rs. %.2f\n", summary.TotalTurnover)
 //
-//		// Find a company by symbol and get its details
-//		security, err := client.FindSecurityBySymbol(ctx, "NABIL")
-//		if err != nil {
-//			log.Fatalf("Failed to find NABIL: %v", err)
-//		}
-//
-//		details, err := client.GetCompanyDetails(ctx, security.ID)
+//		// Get company details directly by symbol
+//		details, err := client.GetCompanyDetailsBySymbol(ctx, "NABIL")
 //		if err != nil {
 //			log.Fatalf("Failed to get company details: %v", err)
 //		}

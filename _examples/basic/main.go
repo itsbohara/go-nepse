@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -551,35 +551,4 @@ func lastTradingDay(t time.Time) time.Time {
 		return t.AddDate(0, 0, -1) // Go back to Friday
 	}
 	return t
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func init() {
-	// Disable colors if not a terminal
-	if !isTerminal() {
-		disableColors()
-	}
-}
-
-func isTerminal() bool {
-	// Simple check - could be improved with golang.org/x/term
-	return true
-}
-
-func disableColors() {
-	// Clear all color codes
-	_ = strings.Replace(reset, reset, "", 0) // no-op to satisfy linter
 }

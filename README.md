@@ -155,12 +155,17 @@ if err != nil {
 }
 ```
 
-## Known Limitations
+## Production Checklist
 
-1. **Graph Endpoints**: Return empty data - use `GetPriceVolumeHistory` instead
-2. **Sub-Indices**: API only returns 4 main indices, not sector sub-indices
-3. **Security.SectorName**: Empty from security list - use `GetCompanyList` for sector info
-4. **TLS**: Must disable verification due to NEPSE server configuration
+Before using this library in any production-like environment, ensure you have addressed the following:
+
+- [ ] **Accept Undocumented API Risks**: Acknowledge that this library uses an unofficial API. It **will** break if NEPSE updates their infrastructure.
+- [ ] **TLS Security**: Address the `TLSVerification: false` requirement. In production, consider routing requests through a secure proxy that handles the connection to NEPSE.
+- [ ] **Caching Strategy**: Implement application-level caching. The NEPSE API is sensitive to high traffic and may block requests if hit too frequently.
+- [ ] **Error Monitoring**: Listen for `nepse.NepseError` and set up alerts for `ErrorTypeNetwork` or `ErrorTypeInternal` which often indicate API changes.
+- [ ] **Rate Limiting**: Ensure your application respects NEPSE's implicit rate limits to avoid IP blocks.
+- [ ] **Fallback Plan**: Have a manual or alternative data source strategy for when the API is unavailable during trading hours.
+
 
 ## Examples
 
