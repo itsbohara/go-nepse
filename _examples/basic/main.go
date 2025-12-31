@@ -225,13 +225,6 @@ func main() {
 		printError("GetSecurityList", err)
 	} else {
 		printKV("Total Securities", fmt.Sprintf("%d", len(secs)))
-		suspended := 0
-		for _, s := range secs {
-			if s.IsSuspended {
-				suspended++
-			}
-		}
-		printKV("Suspended", fmt.Sprintf("%d", suspended))
 	}
 
 	// Company List
@@ -263,13 +256,10 @@ func main() {
 		securityID = sec.ID
 		printKV("ID", fmt.Sprintf("%d", sec.ID))
 		printKV("Name", sec.SecurityName)
-		printKV("Sector", sec.SectorName)
-		printKV("Instrument", sec.Instrument)
-		printKV("Listed", sec.ListingDate)
-		if sec.IsSuspended {
-			printKV("Status", fmt.Sprintf("%sSUSPENDED%s", red, reset))
-		} else {
+		if sec.ActiveStatus == "A" {
 			printKV("Status", fmt.Sprintf("%sActive%s", green, reset))
+		} else {
+			printKV("Status", fmt.Sprintf("%s%s%s", yellow, sec.ActiveStatus, reset))
 		}
 	}
 
@@ -322,10 +312,10 @@ func main() {
 		} else {
 			printKV("Data Points", fmt.Sprintf("%d trading days", len(hist)))
 			if len(hist) > 0 {
-				fmt.Printf("    %s%-12s %10s %10s %10s %10s %12s%s\n", dim, "Date", "Open", "High", "Low", "Close", "Volume", reset)
+				fmt.Printf("    %s%-12s %10s %10s %10s %12s%s\n", dim, "Date", "High", "Low", "Close", "Volume", reset)
 				for _, h := range hist[:min(5, len(hist))] {
-					fmt.Printf("    %-12s %10.2f %10.2f %10.2f %10.2f %12d\n",
-						h.BusinessDate, h.OpenPrice, h.HighPrice, h.LowPrice, h.ClosePrice, h.TotalTradedQuantity)
+					fmt.Printf("    %-12s %10.2f %10.2f %10.2f %12d\n",
+						h.BusinessDate, h.HighPrice, h.LowPrice, h.ClosePrice, h.TotalTradedQuantity)
 				}
 				if len(hist) > 5 {
 					printDim(fmt.Sprintf("... and %d more", len(hist)-5))
@@ -338,7 +328,12 @@ func main() {
 	if securityID != 0 {
 		printSubSection(fmt.Sprintf("Market Depth: %s", symbol))
 		if depth, err := client.GetMarketDepth(ctx, securityID); err != nil {
-			printError("GetMarketDepth", err)
+			// Market depth is unavailable when market is closed
+			if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "empty") {
+				printDim("Market depth unavailable (market closed)")
+			} else {
+				printError("GetMarketDepth", err)
+			}
 		} else {
 			printKV("Total Buy Qty", fmt.Sprintf("%d", depth.TotalBuyQty))
 			printKV("Total Sell Qty", fmt.Sprintf("%d", depth.TotalSellQty))

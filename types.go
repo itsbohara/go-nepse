@@ -75,17 +75,13 @@ type SubIndex struct {
 }
 
 // Security represents a listed security/company.
+// Note: The security list API only returns id, symbol, securityName, and activeStatus.
+// For sector info, use GetCompanyList() instead.
 type Security struct {
-	ID                   int32  `json:"id"`
-	Symbol               string `json:"symbol"`
-	SecurityName         string `json:"securityName"`
-	IsSuspended          bool   `json:"isSuspended"`
-	SectorName           string `json:"sectorName"`
-	Instrument           string `json:"instrument"`
-	RegulatoryCategoryID int32  `json:"regulatoryCategoryId"`
-	ShareGroupID         int32  `json:"shareGroupId"`
-	ActiveStatus         string `json:"activeStatus"`
-	ListingDate          string `json:"listingDate"`
+	ID           int32  `json:"id"`
+	Symbol       string `json:"symbol"`
+	SecurityName string `json:"securityName"`
+	ActiveStatus string `json:"activeStatus"`
 }
 
 // Company represents company information.
@@ -126,9 +122,9 @@ type TodayPrice struct {
 }
 
 // PriceHistory represents historical OHLCV data for a security.
+// Note: NEPSE API does not provide open price in historical data.
 type PriceHistory struct {
 	BusinessDate        string  `json:"businessDate"`
-	OpenPrice           float64 `json:"openPrice,omitempty"`
 	HighPrice           float64 `json:"highPrice"`
 	LowPrice            float64 `json:"lowPrice"`
 	ClosePrice          float64 `json:"closePrice"`
