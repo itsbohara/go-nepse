@@ -16,8 +16,8 @@ const (
 	sensitiveFloatIndexID = 63
 )
 
-// GetMarketSummary returns aggregate market statistics including turnover, volume, and capitalization.
-func (c *Client) GetMarketSummary(ctx context.Context) (*MarketSummary, error) {
+// MarketSummary returns aggregate market statistics including turnover, volume, and capitalization.
+func (c *Client) MarketSummary(ctx context.Context) (*MarketSummary, error) {
 	var rawItems []MarketSummaryItem
 	if err := c.apiRequest(ctx, c.config.Endpoints.MarketSummary, &rawItems); err != nil {
 		return nil, err
@@ -44,8 +44,8 @@ func (c *Client) GetMarketSummary(ctx context.Context) (*MarketSummary, error) {
 	return summary, nil
 }
 
-// GetMarketStatus returns whether the market is currently open or closed.
-func (c *Client) GetMarketStatus(ctx context.Context) (*MarketStatus, error) {
+// MarketStatus returns whether the market is currently open or closed.
+func (c *Client) MarketStatus(ctx context.Context) (*MarketStatus, error) {
 	var status MarketStatus
 	if err := c.apiRequest(ctx, c.config.Endpoints.MarketOpen, &status); err != nil {
 		return nil, err
@@ -53,8 +53,8 @@ func (c *Client) GetMarketStatus(ctx context.Context) (*MarketStatus, error) {
 	return &status, nil
 }
 
-// GetNepseIndex returns the main NEPSE index with current value, change, and 52-week range.
-func (c *Client) GetNepseIndex(ctx context.Context) (*NepseIndex, error) {
+// NepseIndex returns the main NEPSE index with current value, change, and 52-week range.
+func (c *Client) NepseIndex(ctx context.Context) (*NepseIndex, error) {
 	var rawIndices []NepseIndexRaw
 	if err := c.apiRequest(ctx, c.config.Endpoints.NepseIndex, &rawIndices); err != nil {
 		return nil, err
@@ -80,10 +80,10 @@ func (c *Client) GetNepseIndex(ctx context.Context) (*NepseIndex, error) {
 	return nil, NewNotFoundError("NEPSE Index")
 }
 
-// GetNepseSubIndices returns other main indices (Sensitive, Float, Sensitive Float)
+// SubIndices returns other main indices (Sensitive, Float, Sensitive Float)
 // excluding the main NEPSE index.
 // Note: Sector sub-indices are only available through graph endpoints.
-func (c *Client) GetNepseSubIndices(ctx context.Context) ([]SubIndex, error) {
+func (c *Client) SubIndices(ctx context.Context) ([]SubIndex, error) {
 	var rawIndices []NepseIndexRaw
 	if err := c.apiRequest(ctx, c.config.Endpoints.NepseIndex, &rawIndices); err != nil {
 		return nil, err
@@ -100,8 +100,8 @@ func (c *Client) GetNepseSubIndices(ctx context.Context) ([]SubIndex, error) {
 	return subIndices, nil
 }
 
-// GetLiveMarket returns real-time price and volume data for all actively traded securities.
-func (c *Client) GetLiveMarket(ctx context.Context) ([]LiveMarketEntry, error) {
+// LiveMarket returns real-time price and volume data for all actively traded securities.
+func (c *Client) LiveMarket(ctx context.Context) ([]LiveMarketEntry, error) {
 	var liveMarket []LiveMarketEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.LiveMarket, &liveMarket); err != nil {
 		return nil, err
@@ -117,15 +117,15 @@ type SupplyDemandData struct {
 
 // SupplyDemandItem represents a single item in supply or demand list.
 type SupplyDemandItem struct {
-	SecurityID   int32  `json:"securityId"`
-	Symbol       string `json:"symbol"`
-	SecurityName string `json:"securityName"`
-	TotalQuantity int64 `json:"totalQuantity"`
-	TotalOrder   int32  `json:"totalOrder"`
+	SecurityID    int32  `json:"securityId"`
+	Symbol        string `json:"symbol"`
+	SecurityName  string `json:"securityName"`
+	TotalQuantity int64  `json:"totalQuantity"`
+	TotalOrder    int32  `json:"totalOrder"`
 }
 
-// GetSupplyDemand returns aggregate supply and demand data.
-func (c *Client) GetSupplyDemand(ctx context.Context) (*SupplyDemandData, error) {
+// SupplyDemand returns aggregate supply and demand data.
+func (c *Client) SupplyDemand(ctx context.Context) (*SupplyDemandData, error) {
 	var data SupplyDemandData
 	if err := c.apiRequest(ctx, c.config.Endpoints.SupplyDemand, &data); err != nil {
 		return nil, err
@@ -133,8 +133,8 @@ func (c *Client) GetSupplyDemand(ctx context.Context) (*SupplyDemandData, error)
 	return &data, nil
 }
 
-// GetTopGainers returns securities with the highest percentage gains for the trading day.
-func (c *Client) GetTopGainers(ctx context.Context) ([]TopGainerLoserEntry, error) {
+// TopGainers returns securities with the highest percentage gains for the trading day.
+func (c *Client) TopGainers(ctx context.Context) ([]TopGainerLoserEntry, error) {
 	var topGainers []TopGainerLoserEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopGainers, &topGainers); err != nil {
 		return nil, err
@@ -142,8 +142,8 @@ func (c *Client) GetTopGainers(ctx context.Context) ([]TopGainerLoserEntry, erro
 	return topGainers, nil
 }
 
-// GetTopLosers returns securities with the highest percentage losses for the trading day.
-func (c *Client) GetTopLosers(ctx context.Context) ([]TopGainerLoserEntry, error) {
+// TopLosers returns securities with the highest percentage losses for the trading day.
+func (c *Client) TopLosers(ctx context.Context) ([]TopGainerLoserEntry, error) {
 	var topLosers []TopGainerLoserEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopLosers, &topLosers); err != nil {
 		return nil, err
@@ -151,8 +151,8 @@ func (c *Client) GetTopLosers(ctx context.Context) ([]TopGainerLoserEntry, error
 	return topLosers, nil
 }
 
-// GetTopTenTrade returns the ten securities with the highest traded share volume.
-func (c *Client) GetTopTenTrade(ctx context.Context) ([]TopTradeEntry, error) {
+// TopTenTrade returns the ten securities with the highest traded share volume.
+func (c *Client) TopTenTrade(ctx context.Context) ([]TopTradeEntry, error) {
 	var topTrade []TopTradeEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopTrade, &topTrade); err != nil {
 		return nil, err
@@ -160,8 +160,8 @@ func (c *Client) GetTopTenTrade(ctx context.Context) ([]TopTradeEntry, error) {
 	return topTrade, nil
 }
 
-// GetTopTenTransaction returns the ten securities with the most transactions.
-func (c *Client) GetTopTenTransaction(ctx context.Context) ([]TopTransactionEntry, error) {
+// TopTenTransaction returns the ten securities with the most transactions.
+func (c *Client) TopTenTransaction(ctx context.Context) ([]TopTransactionEntry, error) {
 	var topTransaction []TopTransactionEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopTransaction, &topTransaction); err != nil {
 		return nil, err
@@ -169,8 +169,8 @@ func (c *Client) GetTopTenTransaction(ctx context.Context) ([]TopTransactionEntr
 	return topTransaction, nil
 }
 
-// GetTopTenTurnover returns the ten securities with the highest trading turnover (value).
-func (c *Client) GetTopTenTurnover(ctx context.Context) ([]TopTurnoverEntry, error) {
+// TopTenTurnover returns the ten securities with the highest trading turnover (value).
+func (c *Client) TopTenTurnover(ctx context.Context) ([]TopTurnoverEntry, error) {
 	var topTurnover []TopTurnoverEntry
 	if err := c.apiRequest(ctx, c.config.Endpoints.TopTurnover, &topTurnover); err != nil {
 		return nil, err
@@ -178,9 +178,9 @@ func (c *Client) GetTopTenTurnover(ctx context.Context) ([]TopTurnoverEntry, err
 	return topTurnover, nil
 }
 
-// GetTodaysPrices returns price data for all securities on a given business date.
+// TodaysPrices returns price data for all securities on a given business date.
 // If businessDate is empty, returns data for the current trading day.
-func (c *Client) GetTodaysPrices(ctx context.Context, businessDate string) ([]TodayPrice, error) {
+func (c *Client) TodaysPrices(ctx context.Context, businessDate string) ([]TodayPrice, error) {
 	endpoint := c.config.Endpoints.TodaysPrice
 	if businessDate != "" {
 		params := url.Values{}
@@ -196,8 +196,8 @@ func (c *Client) GetTodaysPrices(ctx context.Context, businessDate string) ([]To
 	return todayPrices, nil
 }
 
-// GetPriceVolumeHistory returns historical OHLCV data for a security within a date range.
-func (c *Client) GetPriceVolumeHistory(ctx context.Context, securityID int32, startDate, endDate string) ([]PriceHistory, error) {
+// PriceHistory returns historical OHLCV data for a security within a date range.
+func (c *Client) PriceHistory(ctx context.Context, securityID int32, startDate, endDate string) ([]PriceHistory, error) {
 	params := url.Values{}
 	params.Set("size", "500")
 	params.Set("startDate", startDate)
@@ -214,17 +214,17 @@ func (c *Client) GetPriceVolumeHistory(ctx context.Context, securityID int32, st
 	return response.Content, nil
 }
 
-// GetPriceVolumeHistoryBySymbol returns historical OHLCV data for a security by symbol.
-func (c *Client) GetPriceVolumeHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error) {
+// PriceHistoryBySymbol returns historical OHLCV data for a security by symbol.
+func (c *Client) PriceHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error) {
 	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return c.GetPriceVolumeHistory(ctx, security.ID, startDate, endDate)
+	return c.PriceHistory(ctx, security.ID, startDate, endDate)
 }
 
-// GetMarketDepth returns the order book (bid/ask levels) for a security.
-func (c *Client) GetMarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error) {
+// MarketDepth returns the order book (bid/ask levels) for a security.
+func (c *Client) MarketDepth(ctx context.Context, securityID int32) (*MarketDepth, error) {
 	endpoint := fmt.Sprintf("%s/%d", c.config.Endpoints.MarketDepth, securityID)
 
 	var raw MarketDepthRaw
@@ -240,17 +240,17 @@ func (c *Client) GetMarketDepth(ctx context.Context, securityID int32) (*MarketD
 	}, nil
 }
 
-// GetMarketDepthBySymbol returns the order book for a security by ticker symbol.
-func (c *Client) GetMarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error) {
+// MarketDepthBySymbol returns the order book for a security by ticker symbol.
+func (c *Client) MarketDepthBySymbol(ctx context.Context, symbol string) (*MarketDepth, error) {
 	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return c.GetMarketDepth(ctx, security.ID)
+	return c.MarketDepth(ctx, security.ID)
 }
 
-// GetSecurityList returns all tradable securities on the exchange.
-func (c *Client) GetSecurityList(ctx context.Context) ([]Security, error) {
+// Securities returns all tradable securities on the exchange.
+func (c *Client) Securities(ctx context.Context) ([]Security, error) {
 	var securities []Security
 	if err := c.apiRequest(ctx, c.config.Endpoints.SecurityList, &securities); err != nil {
 		return nil, err
@@ -258,8 +258,8 @@ func (c *Client) GetSecurityList(ctx context.Context) ([]Security, error) {
 	return securities, nil
 }
 
-// GetCompanyList returns all listed companies on the exchange.
-func (c *Client) GetCompanyList(ctx context.Context) ([]Company, error) {
+// Companies returns all listed companies on the exchange.
+func (c *Client) Companies(ctx context.Context) ([]Company, error) {
 	var companies []Company
 	if err := c.apiRequest(ctx, c.config.Endpoints.CompanyList, &companies); err != nil {
 		return nil, err
@@ -267,8 +267,8 @@ func (c *Client) GetCompanyList(ctx context.Context) ([]Company, error) {
 	return companies, nil
 }
 
-// GetCompanyDetails returns comprehensive information including price data for a security.
-func (c *Client) GetCompanyDetails(ctx context.Context, securityID int32) (*CompanyDetails, error) {
+// Company returns comprehensive information including price data for a security.
+func (c *Client) Company(ctx context.Context, securityID int32) (*CompanyDetails, error) {
 	endpoint := fmt.Sprintf("%s/%d", c.config.Endpoints.CompanyDetails, securityID)
 
 	var rawDetails CompanyDetailsRaw
@@ -302,19 +302,19 @@ func (c *Client) GetCompanyDetails(ctx context.Context, securityID int32) (*Comp
 	return details, nil
 }
 
-// GetCompanyDetailsBySymbol returns comprehensive information for a security by ticker symbol.
-func (c *Client) GetCompanyDetailsBySymbol(ctx context.Context, symbol string) (*CompanyDetails, error) {
+// CompanyBySymbol returns comprehensive information for a security by ticker symbol.
+func (c *Client) CompanyBySymbol(ctx context.Context, symbol string) (*CompanyDetails, error) {
 	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return c.GetCompanyDetails(ctx, security.ID)
+	return c.Company(ctx, security.ID)
 }
 
-// GetSectorScrips returns a map of sector names to their constituent security symbols.
-func (c *Client) GetSectorScrips(ctx context.Context) (SectorScrips, error) {
+// SectorScrips returns a map of sector names to their constituent security symbols.
+func (c *Client) SectorScrips(ctx context.Context) (SectorScrips, error) {
 	// Use company list which includes sector information
-	companies, err := c.GetCompanyList(ctx)
+	companies, err := c.Companies(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func (c *Client) findSecurityByID(ctx context.Context, id int32) (*Security, err
 		return nil, NewInvalidClientRequestError("security ID must be positive")
 	}
 
-	securities, err := c.GetSecurityList(ctx)
+	securities, err := c.Securities(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +370,7 @@ func (c *Client) findSecurityBySymbol(ctx context.Context, symbol string) (*Secu
 		return nil, NewInvalidClientRequestError("symbol cannot be empty")
 	}
 
-	securities, err := c.GetSecurityList(ctx)
+	securities, err := c.Securities(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -384,10 +384,10 @@ func (c *Client) findSecurityBySymbol(ctx context.Context, symbol string) (*Secu
 	return nil, NewNotFoundError("security with symbol " + symbol)
 }
 
-// GetFloorSheet returns all trades executed on the exchange for the current trading day.
+// FloorSheet returns all trades executed on the exchange for the current trading day.
 // Handles both array and paginated response formats.
 // Note: Returns empty slice if no trades have occurred yet.
-func (c *Client) GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, error) {
+func (c *Client) FloorSheet(ctx context.Context) ([]FloorSheetEntry, error) {
 	params := url.Values{}
 	params.Set("size", "500")
 	params.Set("sort", "contractId,desc")
@@ -423,9 +423,9 @@ func (c *Client) GetFloorSheet(ctx context.Context) ([]FloorSheetEntry, error) {
 	return all, nil
 }
 
-// GetFloorSheetOf returns all trades for a specific security on a given business date.
+// FloorSheetOf returns all trades for a specific security on a given business date.
 // Note: This endpoint may return 403 Forbidden if NEPSE has restricted access.
-func (c *Client) GetFloorSheetOf(ctx context.Context, securityID int32, businessDate string) ([]FloorSheetEntry, error) {
+func (c *Client) FloorSheetOf(ctx context.Context, securityID int32, businessDate string) ([]FloorSheetEntry, error) {
 	params := url.Values{}
 	params.Set("businessDate", businessDate)
 	params.Set("size", "500")
@@ -458,12 +458,12 @@ func (c *Client) GetFloorSheetOf(ctx context.Context, securityID int32, business
 	return allEntries, nil
 }
 
-// GetFloorSheetBySymbol returns all trades for a specific security by symbol on a given date.
+// FloorSheetBySymbol returns all trades for a specific security by symbol on a given date.
 // Note: This endpoint may return 403 Forbidden if NEPSE has restricted access.
-func (c *Client) GetFloorSheetBySymbol(ctx context.Context, symbol string, businessDate string) ([]FloorSheetEntry, error) {
+func (c *Client) FloorSheetBySymbol(ctx context.Context, symbol string, businessDate string) ([]FloorSheetEntry, error) {
 	security, err := c.findSecurityBySymbol(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	return c.GetFloorSheetOf(ctx, security.ID, businessDate)
+	return c.FloorSheetOf(ctx, security.ID, businessDate)
 }

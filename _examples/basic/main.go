@@ -64,8 +64,8 @@ func main() {
 
 	// Market Status
 	printSubSection("Status")
-	if status, err := client.GetMarketStatus(ctx); err != nil {
-		printError("GetMarketStatus", err)
+	if status, err := client.MarketStatus(ctx); err != nil {
+		printError("MarketStatus", err)
 	} else {
 		statusColor := red
 		if status.IsMarketOpen() {
@@ -77,8 +77,8 @@ func main() {
 
 	// Market Summary
 	printSubSection("Summary")
-	if summary, err := client.GetMarketSummary(ctx); err != nil {
-		printError("GetMarketSummary", err)
+	if summary, err := client.MarketSummary(ctx); err != nil {
+		printError("MarketSummary", err)
 	} else {
 		printKV("Turnover", formatNumber(summary.TotalTurnover))
 		printKV("Traded Shares", formatNumber(summary.TotalTradedShares))
@@ -88,8 +88,8 @@ func main() {
 
 	// NEPSE Index
 	printSubSection("NEPSE Index")
-	if idx, err := client.GetNepseIndex(ctx); err != nil {
-		printError("GetNepseIndex", err)
+	if idx, err := client.NepseIndex(ctx); err != nil {
+		printError("NepseIndex", err)
 	} else {
 		changeColor := green
 		if idx.PercentChange < 0 {
@@ -103,8 +103,8 @@ func main() {
 
 	// Other Main Indices
 	printSubSection("Other Main Indices")
-	if subs, err := client.GetNepseSubIndices(ctx); err != nil {
-		printError("GetNepseSubIndices", err)
+	if subs, err := client.SubIndices(ctx); err != nil {
+		printError("SubIndices", err)
 	} else {
 		if len(subs) == 0 {
 			printDim("No other indices available (sector sub-indices only in graph data)")
@@ -129,8 +129,8 @@ func main() {
 
 	// Live Market
 	printSubSection("Active Securities")
-	if live, err := client.GetLiveMarket(ctx); err != nil {
-		printError("GetLiveMarket", err)
+	if live, err := client.LiveMarket(ctx); err != nil {
+		printError("LiveMarket", err)
 	} else if len(live) == 0 {
 		printDim("No live data available (market closed)")
 	} else {
@@ -151,8 +151,8 @@ func main() {
 
 	// Supply & Demand
 	printSubSection("Supply & Demand")
-	if sd, err := client.GetSupplyDemand(ctx); err != nil {
-		printError("GetSupplyDemand", err)
+	if sd, err := client.SupplyDemand(ctx); err != nil {
+		printError("SupplyDemand", err)
 	} else if len(sd.SupplyList) == 0 && len(sd.DemandList) == 0 {
 		printDim("No supply/demand data available (market closed)")
 	} else {
@@ -167,24 +167,24 @@ func main() {
 
 	// Top Gainers
 	printSubSection("Top Gainers")
-	if gainers, err := client.GetTopGainers(ctx); err != nil {
-		printError("GetTopGainers", err)
+	if gainers, err := client.TopGainers(ctx); err != nil {
+		printError("TopGainers", err)
 	} else {
 		printTopGainerLoser(gainers, 5, true)
 	}
 
 	// Top Losers
 	printSubSection("Top Losers")
-	if losers, err := client.GetTopLosers(ctx); err != nil {
-		printError("GetTopLosers", err)
+	if losers, err := client.TopLosers(ctx); err != nil {
+		printError("TopLosers", err)
 	} else {
 		printTopGainerLoser(losers, 5, false)
 	}
 
 	// Top by Volume
 	printSubSection("Top by Volume")
-	if trades, err := client.GetTopTenTrade(ctx); err != nil {
-		printError("GetTopTenTrade", err)
+	if trades, err := client.TopTenTrade(ctx); err != nil {
+		printError("TopTenTrade", err)
 	} else {
 		fmt.Printf("    %s%-10s %12s %12s%s\n", dim, "Symbol", "Volume", "Price", reset)
 		for _, t := range trades[:min(5, len(trades))] {
@@ -194,8 +194,8 @@ func main() {
 
 	// Top by Transactions
 	printSubSection("Top by Transactions")
-	if txns, err := client.GetTopTenTransaction(ctx); err != nil {
-		printError("GetTopTenTransaction", err)
+	if txns, err := client.TopTenTransaction(ctx); err != nil {
+		printError("TopTenTransaction", err)
 	} else {
 		fmt.Printf("    %s%-10s %12s %12s%s\n", dim, "Symbol", "Trades", "LTP", reset)
 		for _, t := range txns[:min(5, len(txns))] {
@@ -205,8 +205,8 @@ func main() {
 
 	// Top by Turnover
 	printSubSection("Top by Turnover")
-	if turnover, err := client.GetTopTenTurnover(ctx); err != nil {
-		printError("GetTopTenTurnover", err)
+	if turnover, err := client.TopTenTurnover(ctx); err != nil {
+		printError("TopTenTurnover", err)
 	} else {
 		fmt.Printf("    %s%-10s %18s %12s%s\n", dim, "Symbol", "Turnover", "Price", reset)
 		for _, t := range turnover[:min(5, len(turnover))] {
@@ -221,24 +221,24 @@ func main() {
 
 	// Security List
 	printSubSection("Listed Securities")
-	if secs, err := client.GetSecurityList(ctx); err != nil {
-		printError("GetSecurityList", err)
+	if secs, err := client.Securities(ctx); err != nil {
+		printError("Securities", err)
 	} else {
 		printKV("Total Securities", fmt.Sprintf("%d", len(secs)))
 	}
 
 	// Company List
 	printSubSection("Listed Companies")
-	if companies, err := client.GetCompanyList(ctx); err != nil {
-		printError("GetCompanyList", err)
+	if companies, err := client.Companies(ctx); err != nil {
+		printError("Companies", err)
 	} else {
 		printKV("Total Companies", fmt.Sprintf("%d", len(companies)))
 	}
 
 	// Sector Distribution
 	printSubSection("Sector Distribution")
-	if sectors, err := client.GetSectorScrips(ctx); err != nil {
-		printError("GetSectorScrips", err)
+	if sectors, err := client.SectorScrips(ctx); err != nil {
+		printError("SectorScrips", err)
 	} else {
 		printKV("Total Sectors", fmt.Sprintf("%d", len(sectors)))
 		for sector, scrips := range sectors {
@@ -266,8 +266,8 @@ func main() {
 	// Company Details
 	if securityID != 0 {
 		printSubSection(fmt.Sprintf("Company Details: %s", symbol))
-		if det, err := client.GetCompanyDetails(ctx, securityID); err != nil {
-			printError("GetCompanyDetails", err)
+		if det, err := client.Company(ctx, securityID); err != nil {
+			printError("Company", err)
 		} else {
 			printKV("Open", fmt.Sprintf("%.2f", det.OpenPrice))
 			printKV("High", fmt.Sprintf("%.2f", det.HighPrice))
@@ -288,8 +288,8 @@ func main() {
 
 	// Today's Prices
 	printSubSection(fmt.Sprintf("Today's Prices (%s)", bizDate))
-	if prices, err := client.GetTodaysPrices(ctx, bizDate); err != nil {
-		printError("GetTodaysPrices", err)
+	if prices, err := client.TodaysPrices(ctx, bizDate); err != nil {
+		printError("TodaysPrices", err)
 	} else if len(prices) == 0 {
 		printDim("No price data available (market closed or no trades on this date)")
 	} else {
@@ -307,8 +307,8 @@ func main() {
 	// Price History
 	if securityID != 0 {
 		printSubSection(fmt.Sprintf("Price History: %s (%s to %s)", symbol, startDate, endDate))
-		if hist, err := client.GetPriceVolumeHistory(ctx, securityID, startDate, endDate); err != nil {
-			printError("GetPriceVolumeHistory", err)
+		if hist, err := client.PriceHistory(ctx, securityID, startDate, endDate); err != nil {
+			printError("PriceHistory", err)
 		} else {
 			printKV("Data Points", fmt.Sprintf("%d trading days", len(hist)))
 			if len(hist) > 0 {
@@ -327,12 +327,12 @@ func main() {
 	// Market Depth
 	if securityID != 0 {
 		printSubSection(fmt.Sprintf("Market Depth: %s", symbol))
-		if depth, err := client.GetMarketDepth(ctx, securityID); err != nil {
+		if depth, err := client.MarketDepth(ctx, securityID); err != nil {
 			// Market depth is unavailable when market is closed
 			if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "empty") {
 				printDim("Market depth unavailable (market closed)")
 			} else {
-				printError("GetMarketDepth", err)
+				printError("MarketDepth", err)
 			}
 		} else {
 			printKV("Total Buy Qty", fmt.Sprintf("%d", depth.TotalBuyQty))
@@ -371,8 +371,8 @@ func main() {
 		printSection("FLOORSHEET")
 
 		printSubSection("Today's Floorsheet")
-		if fs, err := client.GetFloorSheet(ctx); err != nil {
-			printError("GetFloorSheet", err)
+		if fs, err := client.FloorSheet(ctx); err != nil {
+			printError("FloorSheet", err)
 		} else {
 			printKV("Total Trades", fmt.Sprintf("%d", len(fs)))
 			if len(fs) > 0 {
@@ -389,8 +389,8 @@ func main() {
 
 		if securityID != 0 {
 			printSubSection(fmt.Sprintf("Floorsheet: %s (%s)", symbol, bizDate))
-			if fs, err := client.GetFloorSheetOf(ctx, securityID, bizDate); err != nil {
-				printError("GetFloorSheetOf", err)
+			if fs, err := client.FloorSheetOf(ctx, securityID, bizDate); err != nil {
+				printError("FloorSheetOf", err)
 			} else {
 				printKV("Total Trades", fmt.Sprintf("%d", len(fs)))
 			}
@@ -409,10 +409,10 @@ func main() {
 			name string
 			fn   func(context.Context) (*nepse.GraphResponse, error)
 		}{
-			{"NEPSE Index", client.GetDailyNepseIndexGraph},
-			{"Sensitive Index", client.GetDailySensitiveIndexGraph},
-			{"Float Index", client.GetDailyFloatIndexGraph},
-			{"Sensitive Float", client.GetDailySensitiveFloatIndexGraph},
+			{"NEPSE Index", client.DailyNepseIndexGraph},
+			{"Sensitive Index", client.DailySensitiveIndexGraph},
+			{"Float Index", client.DailyFloatIndexGraph},
+			{"Sensitive Float", client.DailySensitiveFloatIndexGraph},
 		}
 		for _, gt := range graphTests {
 			if g, err := gt.fn(ctx); err != nil {
@@ -428,19 +428,19 @@ func main() {
 			name string
 			fn   func(context.Context) (*nepse.GraphResponse, error)
 		}{
-			{"Banking", client.GetDailyBankSubindexGraph},
-			{"Development Bank", client.GetDailyDevelopmentBankSubindexGraph},
-			{"Finance", client.GetDailyFinanceSubindexGraph},
-			{"Hotels & Tourism", client.GetDailyHotelTourismSubindexGraph},
-			{"Hydro Power", client.GetDailyHydroSubindexGraph},
-			{"Investment", client.GetDailyInvestmentSubindexGraph},
-			{"Life Insurance", client.GetDailyLifeInsuranceSubindexGraph},
-			{"Manufacturing", client.GetDailyManufacturingSubindexGraph},
-			{"Microfinance", client.GetDailyMicrofinanceSubindexGraph},
-			{"Mutual Fund", client.GetDailyMutualfundSubindexGraph},
-			{"Non-Life Insurance", client.GetDailyNonLifeInsuranceSubindexGraph},
-			{"Others", client.GetDailyOthersSubindexGraph},
-			{"Trading", client.GetDailyTradingSubindexGraph},
+			{"Banking", client.DailyBankSubindexGraph},
+			{"Development Bank", client.DailyDevelopmentBankSubindexGraph},
+			{"Finance", client.DailyFinanceSubindexGraph},
+			{"Hotels & Tourism", client.DailyHotelTourismSubindexGraph},
+			{"Hydro Power", client.DailyHydroSubindexGraph},
+			{"Investment", client.DailyInvestmentSubindexGraph},
+			{"Life Insurance", client.DailyLifeInsuranceSubindexGraph},
+			{"Manufacturing", client.DailyManufacturingSubindexGraph},
+			{"Microfinance", client.DailyMicrofinanceSubindexGraph},
+			{"Mutual Fund", client.DailyMutualfundSubindexGraph},
+			{"Non-Life Insurance", client.DailyNonLifeInsuranceSubindexGraph},
+			{"Others", client.DailyOthersSubindexGraph},
+			{"Trading", client.DailyTradingSubindexGraph},
 		}
 		for _, sg := range sectorGraphs {
 			if g, err := sg.fn(ctx); err != nil {
@@ -453,8 +453,8 @@ func main() {
 		// Security Graph
 		if securityID != 0 {
 			printSubSection(fmt.Sprintf("Security Graph: %s", symbol))
-			if g, err := client.GetDailyScripPriceGraph(ctx, securityID); err != nil {
-				printError("GetDailyScripPriceGraph", err)
+			if g, err := client.DailyScripGraph(ctx, securityID); err != nil {
+				printError("DailyScripGraph", err)
 			} else {
 				printKV("Data Points", fmt.Sprintf("%d", len(g.Data)))
 				if len(g.Data) > 0 {

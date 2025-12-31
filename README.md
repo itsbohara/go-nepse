@@ -52,7 +52,7 @@ func main() {
     ctx := context.Background()
 
     // Get market summary
-    summary, err := client.GetMarketSummary(ctx)
+    summary, err := client.MarketSummary(ctx)
     if err != nil {
         log.Fatalf("Failed to get market summary: %v", err)
     }
@@ -60,7 +60,7 @@ func main() {
     fmt.Printf("Total Transactions: %.0f\n", summary.TotalTransactions)
 
     // Get company details by symbol
-    details, err := client.GetCompanyDetailsBySymbol(ctx, "NABIL")
+    details, err := client.CompanyBySymbol(ctx, "NABIL")
     if err != nil {
         log.Fatalf("Failed to get company details: %v", err)
     }
@@ -74,54 +74,54 @@ func main() {
 
 | Method | Description |
 |--------|-------------|
-| `GetMarketSummary()` | Overall market statistics (turnover, volume, capitalization) |
-| `GetMarketStatus()` | Current market open/close status |
-| `GetNepseIndex()` | Main NEPSE index with current value and 52-week range |
-| `GetNepseSubIndices()` | All sector sub-indices (Note: API currently returns empty) |
-| `GetLiveMarket()` | Real-time price and volume data |
-| `GetSupplyDemand()` | Aggregate supply and demand data |
+| `MarketSummary()` | Overall market statistics (turnover, volume, capitalization) |
+| `MarketStatus()` | Current market open/close status |
+| `NepseIndex()` | Main NEPSE index with current value and 52-week range |
+| `SubIndices()` | All sector sub-indices (Note: API currently returns empty) |
+| `LiveMarket()` | Real-time price and volume data |
+| `SupplyDemand()` | Aggregate supply and demand data |
 
 ### Securities & Companies
 
 | Method | Description |
 |--------|-------------|
-| `GetSecurityList()` | All tradable securities |
-| `GetCompanyList()` | All listed companies with sector info |
-| `GetCompanyDetails(id)` | Comprehensive info including price data |
-| `GetCompanyDetailsBySymbol(symbol)` | Same as above, by ticker symbol |
-| `GetSectorScrips()` | Securities grouped by sector |
+| `Securities()` | All tradable securities |
+| `Companies()` | All listed companies with sector info |
+| `Company(id)` | Comprehensive info including price data |
+| `CompanyBySymbol(symbol)` | Same as above, by ticker symbol |
+| `SectorScrips()` | Securities grouped by sector |
 | `FindSecurity(id)` / `FindSecurityBySymbol(symbol)` | Find security by ID or symbol |
 
 ### Price & Trading Data
 
 | Method | Description |
 |--------|-------------|
-| `GetTodaysPrices(date)` | Price data for all securities on a date |
-| `GetPriceVolumeHistory(id, start, end)` | Historical OHLCV data |
-| `GetPriceVolumeHistoryBySymbol(symbol, start, end)` | Same as above, by symbol |
-| `GetMarketDepth(id)` / `GetMarketDepthBySymbol(symbol)` | Order book (bid/ask levels) |
-| `GetFloorSheet()` | All trades for current day |
-| `GetFloorSheetOf(id, date)` / `GetFloorSheetBySymbol(symbol, date)` | Trades for specific security |
+| `TodaysPrices(date)` | Price data for all securities on a date |
+| `PriceHistory(id, start, end)` | Historical OHLCV data |
+| `PriceHistoryBySymbol(symbol, start, end)` | Same as above, by symbol |
+| `MarketDepth(id)` / `MarketDepthBySymbol(symbol)` | Order book (bid/ask levels) |
+| `FloorSheet()` | All trades for current day |
+| `FloorSheetOf(id, date)` / `FloorSheetBySymbol(symbol, date)` | Trades for specific security |
 
 ### Top Lists
 
 | Method | Description |
 |--------|-------------|
-| `GetTopGainers()` | Securities with highest % gains |
-| `GetTopLosers()` | Securities with highest % losses |
-| `GetTopTenTrade()` | Top by traded share volume |
-| `GetTopTenTransaction()` | Top by transaction count |
-| `GetTopTenTurnover()` | Top by trading turnover |
+| `TopGainers()` | Securities with highest % gains |
+| `TopLosers()` | Securities with highest % losses |
+| `TopTenTrade()` | Top by traded share volume |
+| `TopTenTransaction()` | Top by transaction count |
+| `TopTenTurnover()` | Top by trading turnover |
 
 ### Graph Data
 
 | Method | Description |
 |--------|-------------|
-| `GetDailyIndexGraph(indexType)` | Intraday graph for any index type |
-| `GetDailyNepseIndexGraph()` | Main NEPSE index chart |
-| `GetDailyScripPriceGraph(id)` | Intraday chart for a security |
+| `DailyIndexGraph(indexType)` | Intraday graph for any index type |
+| `DailyNepseIndexGraph()` | Main NEPSE index chart |
+| `DailyScripGraph(id)` | Intraday chart for a security |
 
-> **Note**: Graph endpoints currently return empty data. Use `GetPriceVolumeHistory` for charting.
+> **Note**: Graph endpoints currently return empty data. Use `PriceHistory` for charting.
 
 ## Configuration
 
@@ -146,7 +146,7 @@ The library provides structured error types:
 ```go
 import "errors"
 
-data, err := client.GetMarketSummary(ctx)
+data, err := client.MarketSummary(ctx)
 if err != nil {
     var nepseErr *nepse.NepseError
     if errors.As(err, &nepseErr) {

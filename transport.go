@@ -46,8 +46,8 @@ func initClient(options *Options) (*Client, error) {
 	return c, nil
 }
 
-// GetToken implements auth.NepseHTTP interface.
-func (c *Client) GetToken(ctx context.Context) (*auth.TokenResponse, error) {
+// Token implements auth.NepseHTTP interface.
+func (c *Client) Token(ctx context.Context) (*auth.TokenResponse, error) {
 	url := c.config.BaseURL + "/api/authenticate/prove"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

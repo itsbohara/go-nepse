@@ -41,14 +41,14 @@
 //		ctx := context.Background()
 //
 //		// Get market summary
-//		summary, err := client.GetMarketSummary(ctx)
+//		summary, err := client.MarketSummary(ctx)
 //		if err != nil {
 //			log.Fatalf("Failed to get market summary: %v", err)
 //		}
 //		fmt.Printf("Total Turnover: Rs. %.2f\n", summary.TotalTurnover)
 //
 //		// Get company details directly by symbol
-//		details, err := client.GetCompanyDetailsBySymbol(ctx, "NABIL")
+//		details, err := client.CompanyBySymbol(ctx, "NABIL")
 //		if err != nil {
 //			log.Fatalf("Failed to get company details: %v", err)
 //		}

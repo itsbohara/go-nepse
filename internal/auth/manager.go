@@ -21,7 +21,7 @@ const DefaultTokenTTL = 45 * time.Second
 
 // NepseHTTP abstracts HTTP calls needed for token acquisition.
 type NepseHTTP interface {
-	GetToken(ctx context.Context) (*TokenResponse, error)
+	Token(ctx context.Context) (*TokenResponse, error)
 }
 
 // TokenResponse is the JSON structure from /api/authenticate/prove.
@@ -114,9 +114,9 @@ func (m *Manager) update(ctx context.Context) error {
 			return nil, nil
 		}
 
-		resp, err := m.http.GetToken(ctx)
+		resp, err := m.http.Token(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("get token: %w", err)
+			return nil, fmt.Errorf("token update: %w", err)
 		}
 
 		access, ts, err := m.parseResponse(*resp)

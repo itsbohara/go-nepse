@@ -50,8 +50,8 @@ func NewClient(options *Options) (*Client, error) {
 	return initClient(options)
 }
 
-// GetConfig returns the client's configuration.
-func (c *Client) GetConfig() *Config {
+// Config returns the client's configuration.
+func (c *Client) Config() *Config {
 	return c.config
 }
 
