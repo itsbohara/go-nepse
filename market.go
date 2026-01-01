@@ -467,7 +467,7 @@ func (c *Client) FloorSheetOf(ctx context.Context, securityID int32, businessDat
 
 // FloorSheetBySymbol returns all trades for a specific security by symbol on a given date.
 //
-// IMPORTANT: As of December 2025, NEPSE has blocked this endpoint at the server level.
+// HACK: As of December 2025, NEPSE has blocked this endpoint at the server level.
 // All requests return 403 Forbidden. Use [Client.FloorSheet] instead for general floorsheet data.
 func (c *Client) FloorSheetBySymbol(ctx context.Context, symbol string, businessDate string) ([]FloorSheetEntry, error) {
 	security, err := c.findSecurityBySymbol(ctx, symbol)
