@@ -27,8 +27,17 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Companies count: %d\n", len(data))
-	if len(data) > 0 {
-		fmt.Printf("First company: %+v\n", data[0])
+	// Count equity by status
+	statusCounts := make(map[string]int)
+	for _, c := range data {
+		if c.InstrumentType == "Equity" {
+			statusCounts[c.Status]++
+		}
+	}
+
+	fmt.Printf("Total companies: %d\n", len(data))
+	fmt.Println("Equity by status:")
+	for s, count := range statusCounts {
+		fmt.Printf("  Status '%s': %d\n", s, count)
 	}
 }
