@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/voidarchive/go-nepse/internal/auth"
+	"github.com/itsbohara/go-nepse/internal/auth"
 )
 
 // newTestServer creates a mock NEPSE API server

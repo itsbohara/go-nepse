@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/voidarchive/go-nepse/internal/auth"
+	"github.com/itsbohara/go-nepse/internal/auth"
 )
 
 // Client is the NEPSE API client. Use [NewClient] to create one.

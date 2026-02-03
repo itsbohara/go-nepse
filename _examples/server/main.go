@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voidarchive/go-nepse"
+	"github.com/itsbohara/go-nepse"
 )
 
 type app struct {

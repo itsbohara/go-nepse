@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voidarchive/go-nepse"
+	"github.com/itsbohara/go-nepse"
 )
 
 func main() {

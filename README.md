@@ -22,7 +22,7 @@ Type-safe Go client for NEPSE market data.
 ## Installation
 
 ```bash
-go get github.com/voidarchive/go-nepse
+go get github.com/itsbohara/go-nepse
 ```
 
 ## Quick Start
@@ -35,7 +35,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/voidarchive/go-nepse"
+    "github.com/itsbohara/go-nepse"
 )
 
 func main() {

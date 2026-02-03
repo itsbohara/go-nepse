@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voidarchive/go-nepse/internal/auth"
+	"github.com/itsbohara/go-nepse/internal/auth"
 )
 
 // initClient initializes the HTTP transport and auth manager.

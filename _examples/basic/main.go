@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voidarchive/go-nepse"
+	"github.com/itsbohara/go-nepse"
 )
 
 const (
@@ -604,7 +604,7 @@ func printHeader() {
 	fmt.Println()
 	fmt.Printf("%s╔════════════════════════════════════════════════════════════════╗%s\n", cyan, reset)
 	fmt.Printf("%s║%s           %sNEPSE Go Library - API Demo%s                          %s║%s\n", cyan, reset, bold, reset, cyan, reset)
-	fmt.Printf("%s║%s              github.com/voidarchive/go-nepse                   %s║%s\n", cyan, reset, cyan, reset)
+	fmt.Printf("%s║%s              github.com/itsbohara/go-nepse                   %s║%s\n", cyan, reset, cyan, reset)
 	fmt.Printf("%s╚════════════════════════════════════════════════════════════════╝%s\n", cyan, reset)
 	fmt.Println()
 }
