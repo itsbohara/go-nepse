@@ -1,6 +1,6 @@
-module github.com/voidarchive/go-nepse
+module github.com/itsbohara/go-nepse
 
-go 1.25
+go 1.20
 
 require (
 	github.com/tetratelabs/wazero v1.9.0
