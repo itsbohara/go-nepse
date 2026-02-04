@@ -222,10 +222,50 @@ func (c *Client) PriceHistory(ctx context.Context, securityID int32, startDate, 
 // PriceHistoryBySymbol returns historical OHLCV data for a security by symbol.
 func (c *Client) PriceHistoryBySymbol(ctx context.Context, symbol string, startDate, endDate string) ([]PriceHistory, error) {
 	security, err := c.findSecurityBySymbol(ctx, symbol)
+
 	if err != nil {
 		return nil, err
 	}
-	return c.PriceHistory(ctx, security.ID, startDate, endDate)
+
+	history, err := c.PriceHistory(ctx, security.ID, startDate, endDate)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the requested end date is more recent than the available history
+	// assuming first item is the most recent date
+	if endDate > history[0].BusinessDate {
+		// Fetch today's trading data from security details
+		details, err := c.SecurityDetailBySymbol(ctx, symbol)
+
+		if err != nil {
+			// log error but return available history
+			fmt.Printf("warning: requested end date includes today (%s), but failed to fetch latest data for %s: %v\n", endDate, symbol, err)
+
+			return history, nil
+		}
+
+		todayDate := details.LastUpdatedDateTime[:10] // YYYY-MM-DD
+
+		if todayDate == endDate {
+			// Append today's data
+			todayPrice := PriceHistory{
+				BusinessDate:        todayDate,
+				HighPrice:           details.HighPrice,
+				LowPrice:            details.LowPrice,
+				ClosePrice:          details.ClosePrice,
+				TotalTradedQuantity: details.TotalTradedQuantity,
+				TotalTradedValue:    details.LastTradedPrice * float64(details.TotalTradedQuantity),
+				TotalTrades:         details.TotalTrades,
+			}
+
+			history = append([]PriceHistory{todayPrice}, history...)
+		}
+
+	}
+
+	return history, nil
 }
 
 // MarketDepth returns the order book (bid/ask levels) for a security.

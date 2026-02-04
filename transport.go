@@ -144,6 +144,7 @@ func (c *Client) doAuthenticatedRequest(ctx context.Context, endpoint string, to
 
 	url := c.config.BaseURL + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+
 	if err != nil {
 		return nil, NewInternalError("failed to create request", err)
 	}
