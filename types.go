@@ -297,14 +297,15 @@ type TopListEntry struct {
 // GraphDataPoint represents a single data point in graph data.
 // The NEPSE API returns different formats for different endpoints:
 // - Index graphs: [timestamp, value] arrays
-// - Scrip graphs: {"time": timestamp, "value": value} objects
+// - Scrip graphs: {"time", "contractRate", "contractQuantity"} objects ("value" also accepted)
 type GraphDataPoint struct {
 	Timestamp int64
 	Value     float64
 }
 
 // UnmarshalJSON implements custom unmarshaling for GraphDataPoint.
-// Handles both array format [timestamp, value] and object format {"time": ..., "value": ...}.
+// Handles array format [timestamp, value] and object format; in objects "contractRate" wins
+// over "value" when present.
 func (g *GraphDataPoint) UnmarshalJSON(data []byte) error {
 	// Try array format first (index graphs): [timestamp, value]
 	var arr [2]float64
@@ -314,16 +315,20 @@ func (g *GraphDataPoint) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	// Try object format (scrip graphs): {"time": ..., "value": ...}
+	// Object format (scrip graphs)
 	var obj struct {
-		Time  int64   `json:"time"`
-		Value float64 `json:"value"`
+		Time         int64    `json:"time"`
+		ContractRate *float64 `json:"contractRate"`
+		Value        float64  `json:"value"`
 	}
 	if err := json.Unmarshal(data, &obj); err != nil {
 		return err
 	}
 	g.Timestamp = obj.Time
 	g.Value = obj.Value
+	if obj.ContractRate != nil {
+		g.Value = *obj.ContractRate
+	}
 	return nil
 }
 
