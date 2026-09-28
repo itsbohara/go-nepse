@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration tests
 - Rate limiting improvements
 
+## [0.1.7] - 2026-09-28
+
+### Fixed
+- `DailyScripGraph` / `DailyScripGraphBySymbol` returned every price as 0: NEPSE's scrip graph rows are `{time, contractRate, contractQuantity}`, and `GraphDataPoint` only read `value`. It now reads `contractRate` and falls back to `value`.
+
+### Added
+- Test on a real recorded NABIL scrip-graph response (`testdata/`), re-recordable with `NEPSE_RECORD=1`.
+
 ## [0.2.0] - 2026-01-03
 
 ### Added
